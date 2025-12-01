@@ -6,7 +6,7 @@ use egui::{
 };
 use smallvec::{SmallVec, ToSmallVec, smallvec};
 
-use crate::{InPinId, NodeId, OutPinId, Snarl};
+use crate::{InPinId, NodeId, OutPinId, Treeize};
 
 use super::{SnarlWidget, transform_matching_points};
 
@@ -154,7 +154,7 @@ struct RectSelect {
 }
 
 pub struct SnarlState {
-  /// Snarl viewport transform to global space.
+  /// Treeize viewport transform to global space.
   to_global: TSTransform,
 
   new_wires: Option<NewWires>,
@@ -236,9 +236,12 @@ impl SnarlStateData {
   }
 }
 
-fn prune_selected_nodes<T>(selected_nodes: &mut SmallVec<[NodeId; 8]>, snarl: &Snarl<T>) -> bool {
+fn prune_selected_nodes<T>(
+  selected_nodes: &mut SmallVec<[NodeId; 8]>,
+  treeize: &Treeize<T>,
+) -> bool {
   let old_size = selected_nodes.len();
-  selected_nodes.retain(|node| snarl.nodes.contains(node.0));
+  selected_nodes.retain(|node| treeize.nodes.contains(node.0));
   old_size != selected_nodes.len()
 }
 
@@ -246,18 +249,18 @@ impl SnarlState {
   pub fn load<T>(
     cx: &Context,
     id: Id,
-    snarl: &Snarl<T>,
+    treeize: &Treeize<T>,
     ui_rect: Rect,
     min_scale: f32,
     max_scale: f32,
   ) -> Self {
     let Some(data) = SnarlStateData::load(cx, id) else {
       cx.request_discard("Initial placing");
-      return Self::initial(id, snarl, ui_rect, min_scale, max_scale);
+      return Self::initial(id, treeize, ui_rect, min_scale, max_scale);
     };
 
     let mut selected_nodes = SelectedNodes::load(cx, id).0;
-    let dirty = prune_selected_nodes(&mut selected_nodes, snarl);
+    let dirty = prune_selected_nodes(&mut selected_nodes, treeize);
 
     let draw_order = DrawOrder::load(cx, id).0;
 
@@ -273,10 +276,16 @@ impl SnarlState {
     }
   }
 
-  fn initial<T>(id: Id, snarl: &Snarl<T>, ui_rect: Rect, min_scale: f32, max_scale: f32) -> Self {
+  fn initial<T>(
+    id: Id,
+    treeize: &Treeize<T>,
+    ui_rect: Rect,
+    min_scale: f32,
+    max_scale: f32,
+  ) -> Self {
     let mut bb = Rect::NOTHING;
 
-    for (_, node) in &snarl.nodes {
+    for (_, node) in &treeize.nodes {
       bb.extend_with(node.pos);
     }
 
@@ -306,8 +315,8 @@ impl SnarlState {
   }
 
   #[inline(always)]
-  pub fn store<T>(mut self, snarl: &Snarl<T>, cx: &Context) {
-    self.dirty |= prune_selected_nodes(&mut self.selected_nodes, snarl);
+  pub fn store<T>(mut self, treeize: &Treeize<T>, cx: &Context) {
+    self.dirty |= prune_selected_nodes(&mut self.selected_nodes, treeize);
 
     if self.dirty {
       let data = SnarlStateData {
@@ -465,8 +474,8 @@ impl SnarlState {
     self.new_wires_menu = true;
   }
 
-  pub(crate) fn update_draw_order<T>(&mut self, snarl: &Snarl<T>) -> Vec<NodeId> {
-    let mut node_ids = snarl.nodes.iter().map(|(id, _)| NodeId(id)).collect::<HashSet<_>>();
+  pub(crate) fn update_draw_order<T>(&mut self, treeize: &Treeize<T>) -> Vec<NodeId> {
+    let mut node_ids = treeize.nodes.iter().map(|(id, _)| NodeId(id)).collect::<HashSet<_>>();
 
     self.draw_order.retain(|id| {
       let has = node_ids.remove(id);

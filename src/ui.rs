@@ -1,4 +1,4 @@
-//! This module provides functionality for showing [`Snarl`] graph in [`Ui`].
+//! This module provides functionality for showing [`Treeize`] graph in [`Ui`].
 
 use std::{collections::HashMap, hash::Hash};
 
@@ -15,7 +15,7 @@ use egui::{
 use egui_scale::EguiScale;
 use smallvec::SmallVec;
 
-use crate::{InPin, InPinId, Node, NodeId, OutPin, OutPinId, Snarl, ui::wire::WireId};
+use crate::{InPin, InPinId, Node, NodeId, OutPin, OutPinId, Treeize, ui::wire::WireId};
 
 mod background_pattern;
 mod pin;
@@ -46,62 +46,19 @@ pub enum NodeLayoutKind {
   /// Input pins, body and output pins are placed horizontally.
   /// With header on top and footer on bottom.
   ///
-  /// +---------------------+
+  /// +---------In----------+
   /// |       Header        |
   /// +----+-----------+----+
-  /// | In |           | Out|
-  /// | In |   Body    | Out|
-  /// | In |           | Out|
-  /// | In |           |    |
+  /// |                     |
+  /// |        Body         |
+  /// |                     |
+  /// |                     |
   /// +----+-----------+----+
   /// |       Footer        |
-  /// +---------------------+
+  /// +--------Out----------+
   ///
   #[default]
-  Coil,
-
-  /// All elements are placed in vertical stack.
-  /// Header is on top, then input pins, body, output pins and footer.
-  ///
-  /// +---------------------+
-  /// |       Header        |
-  /// +---------------------+
-  /// | In                  |
-  /// | In                  |
-  /// | In                  |
-  /// | In                  |
-  /// +---------------------+
-  /// |       Body          |
-  /// +---------------------+
-  /// |                 Out |
-  /// |                 Out |
-  /// |                 Out |
-  /// +---------------------+
-  /// |       Footer        |
-  /// +---------------------+
-  Sandwich,
-
-  /// All elements are placed in vertical stack.
-  /// Header is on top, then output pins, body, input pins and footer.
-  ///
-  /// +---------------------+
-  /// |       Header        |
-  /// +---------------------+
-  /// |                 Out |
-  /// |                 Out |
-  /// |                 Out |
-  /// +---------------------+
-  /// |       Body          |
-  /// +---------------------+
-  /// | In                  |
-  /// | In                  |
-  /// | In                  |
-  /// | In                  |
-  /// +---------------------+
-  /// |       Footer        |
-  /// +---------------------+
-  FlippedSandwich,
-  // TODO: Add vertical layouts.
+  Compact,
 }
 
 /// Controls how node elements are laid out.
@@ -124,54 +81,14 @@ pub struct NodeLayout {
 }
 
 impl NodeLayout {
-  /// Creates new [`NodeLayout`] with `Coil` kind and flexible pin heights.
+  /// Creates new [`NodeLayout`] with `compact` kind and flexible pin heights.
   #[must_use]
   #[inline]
-  pub const fn coil() -> Self {
-    NodeLayout { kind: NodeLayoutKind::Coil, min_pin_row_height: 0.0, equal_pin_row_heights: false }
-  }
-
-  /// Creates new [`NodeLayout`] with `Sandwich` kind and flexible pin heights.
-  #[must_use]
-  #[inline]
-  pub const fn sandwich() -> Self {
+  pub const fn compact() -> Self {
     NodeLayout {
-      kind: NodeLayoutKind::Sandwich,
+      kind: NodeLayoutKind::Compact,
       min_pin_row_height: 0.0,
       equal_pin_row_heights: false,
-    }
-  }
-
-  /// Creates new [`NodeLayout`] with `FlippedSandwich` kind and flexible pin heights.
-  #[must_use]
-  #[inline]
-  pub const fn flipped_sandwich() -> Self {
-    NodeLayout {
-      kind: NodeLayoutKind::FlippedSandwich,
-      min_pin_row_height: 0.0,
-      equal_pin_row_heights: false,
-    }
-  }
-
-  /// Returns new [`NodeLayout`] with same `kind` and specified pin heights.
-  #[must_use]
-  #[inline]
-  pub const fn with_equal_pin_rows(self) -> Self {
-    NodeLayout {
-      kind: self.kind,
-      min_pin_row_height: self.min_pin_row_height,
-      equal_pin_row_heights: true,
-    }
-  }
-
-  /// Returns new [`NodeLayout`] with same `kind` and specified minimum pin row height.
-  #[must_use]
-  #[inline]
-  pub const fn with_min_pin_row_height(self, min_pin_row_height: f32) -> Self {
-    NodeLayout {
-      kind: self.kind,
-      min_pin_row_height,
-      equal_pin_row_heights: self.equal_pin_row_heights,
     }
   }
 }
@@ -186,15 +103,13 @@ impl From<NodeLayoutKind> for NodeLayout {
 impl Default for NodeLayout {
   #[inline]
   fn default() -> Self {
-    NodeLayout::coil()
+    Self::compact()
   }
 }
 
 #[derive(Clone, Copy, Debug)]
 enum OuterHeights<'a> {
   Flexible { rows: &'a [f32] },
-  Matching { max: f32 },
-  Tight,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -216,8 +131,6 @@ impl Heights<'_> {
         Some(&outer) => outer.max(inner),
         None => inner,
       },
-      OuterHeights::Matching { max } => max.max(inner),
-      OuterHeights::Tight => inner,
     };
 
     (inner, outer.max(self.min_outer))
@@ -228,45 +141,14 @@ impl NodeLayout {
   fn input_heights(self, state: &NodeState) -> Heights<'_> {
     let rows = state.input_heights().as_slice();
 
-    let outer = match (self.kind, self.equal_pin_row_heights) {
-      (NodeLayoutKind::Coil, false) => {
-        OuterHeights::Flexible { rows: state.output_heights().as_slice() }
-      }
-      (_, true) => {
-        let mut max_height = 0.0f32;
-        for &h in state.input_heights() {
-          max_height = max_height.max(h);
-        }
-        for &h in state.output_heights() {
-          max_height = max_height.max(h);
-        }
-        OuterHeights::Matching { max: max_height }
-      }
-      (_, false) => OuterHeights::Tight,
-    };
+    let outer = OuterHeights::Flexible { rows: state.output_heights().as_slice() };
 
     Heights { rows, outer, min_outer: self.min_pin_row_height }
   }
 
   fn output_heights(self, state: &'_ NodeState) -> Heights<'_> {
     let rows = state.output_heights().as_slice();
-
-    let outer = match (self.kind, self.equal_pin_row_heights) {
-      (NodeLayoutKind::Coil, false) => {
-        OuterHeights::Flexible { rows: state.input_heights().as_slice() }
-      }
-      (_, true) => {
-        let mut max_height = 0.0f32;
-        for &h in state.input_heights() {
-          max_height = max_height.max(h);
-        }
-        for &h in state.output_heights() {
-          max_height = max_height.max(h);
-        }
-        OuterHeights::Matching { max: max_height }
-      }
-      (_, false) => OuterHeights::Tight,
-    };
+    let outer = OuterHeights::Flexible { rows: state.input_heights().as_slice() };
 
     Heights { rows, outer, min_outer: self.min_pin_row_height }
   }
@@ -309,11 +191,11 @@ pub enum PinPlacement {
   },
 }
 
-/// Style for rendering Snarl.
+/// Style for rendering Treeize.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "egui-probe", derive(egui_probe::EguiProbe))]
-pub struct SnarlStyle {
+pub struct TreeizeStyle {
   /// Controls how nodes are laid out.
   /// Defaults to [`NodeLayoutKind::Coil`].
   #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none", default))]
@@ -464,7 +346,7 @@ pub struct SnarlStyle {
   pub _non_exhaustive: (),
 }
 
-impl SnarlStyle {
+impl TreeizeStyle {
   fn get_node_layout(&self) -> NodeLayout {
     self.node_layout.unwrap_or_default()
   }
@@ -640,11 +522,11 @@ mod serde_frame_option {
   }
 }
 
-impl SnarlStyle {
-  /// Creates new [`SnarlStyle`] filled with default values.
+impl TreeizeStyle {
+  /// Creates new [`TreeizeStyle`] filled with default values.
   #[must_use]
   pub const fn new() -> Self {
-    SnarlStyle {
+    TreeizeStyle {
       node_layout: None,
       pin_size: None,
       pin_fill: None,
@@ -681,7 +563,7 @@ impl SnarlStyle {
   }
 }
 
-impl Default for SnarlStyle {
+impl Default for TreeizeStyle {
   #[inline]
   fn default() -> Self {
     Self::new()
@@ -713,12 +595,12 @@ struct PinResponse {
   wire_style: WireStyle,
 }
 
-/// Widget to display [`Snarl`] graph in [`Ui`].
+/// Widget to display [`Treeize`] graph in [`Ui`].
 #[derive(Clone, Copy, Debug)]
 pub struct SnarlWidget {
   id_salt: Id,
   id: Option<Id>,
-  style: SnarlStyle,
+  style: TreeizeStyle,
   min_size: Vec2,
   max_size: Vec2,
 }
@@ -736,9 +618,9 @@ impl SnarlWidget {
   #[must_use]
   pub fn new() -> Self {
     SnarlWidget {
-      id_salt: Id::new(":snarl:"),
+      id_salt: Id::new(":treeize:"),
       id: None,
-      style: SnarlStyle::new(),
+      style: TreeizeStyle::new(),
       min_size: Vec2::ZERO,
       max_size: Vec2::INFINITY,
     }
@@ -769,15 +651,15 @@ impl SnarlWidget {
     self
   }
 
-  /// Set style parameters for the [`Snarl`] widget.
+  /// Set style parameters for the [`Treeize`] widget.
   #[inline]
   #[must_use]
-  pub const fn style(mut self, style: SnarlStyle) -> Self {
+  pub const fn style(mut self, style: TreeizeStyle) -> Self {
     self.style = style;
     self
   }
 
-  /// Set minimum size of the [`Snarl`] widget.
+  /// Set minimum size of the [`Treeize`] widget.
   #[inline]
   #[must_use]
   pub const fn min_size(mut self, min_size: Vec2) -> Self {
@@ -785,7 +667,7 @@ impl SnarlWidget {
     self
   }
 
-  /// Set maximum size of the [`Snarl`] widget.
+  /// Set maximum size of the [`Treeize`] widget.
   #[inline]
   #[must_use]
   pub const fn max_size(mut self, max_size: Vec2) -> Self {
@@ -798,25 +680,25 @@ impl SnarlWidget {
     self.id.unwrap_or_else(|| ui_id.with(self.id_salt))
   }
 
-  /// Render [`Snarl`] using given viewer and style into the [`Ui`].
+  /// Render [`Treeize`] using given viewer and style into the [`Ui`].
   #[inline]
-  pub fn show<T, V>(&self, snarl: &mut Snarl<T>, viewer: &mut V, ui: &mut Ui) -> egui::Response
+  pub fn show<T, V>(&self, treeize: &mut Treeize<T>, viewer: &mut V, ui: &mut Ui) -> egui::Response
   where
     V: SnarlViewer<T>,
   {
     let snarl_id = self.get_id(ui.id());
 
-    show_snarl(snarl_id, self.style, self.min_size, self.max_size, snarl, viewer, ui)
+    show_snarl(snarl_id, self.style, self.min_size, self.max_size, treeize, viewer, ui)
   }
 }
 
 #[inline(never)]
 fn show_snarl<T, V>(
   snarl_id: Id,
-  mut style: SnarlStyle,
+  mut style: TreeizeStyle,
   min_size: Vec2,
   max_size: Vec2,
-  snarl: &mut Snarl<T>,
+  treeize: &mut Treeize<T>,
   viewer: &mut V,
   ui: &mut Ui,
 ) -> egui::Response
@@ -850,7 +732,8 @@ where
 
   let ui_rect = content_rect;
 
-  let mut snarl_state = SnarlState::load(ui.ctx(), snarl_id, snarl, ui_rect, min_scale, max_scale);
+  let mut snarl_state =
+    SnarlState::load(ui.ctx(), snarl_id, treeize, ui_rect, min_scale, max_scale);
   let mut to_global = snarl_state.to_global();
 
   let clip_rect = ui.clip_rect();
@@ -885,7 +768,7 @@ where
   }
 
   // Inform viewer about current transform.
-  viewer.current_transform(&mut to_global, snarl);
+  viewer.current_transform(&mut to_global, treeize);
 
   snarl_state.set_to_global(to_global);
 
@@ -899,7 +782,7 @@ where
   ui.set_clip_rect(viewport.intersect(viewport_clip));
   ui.expand_to_include_rect(viewport);
 
-  // Set transform for snarl layer.
+  // Set transform for treeize layer.
   ui.ctx().set_transform_layer(snarl_layer_id, to_global);
 
   // Map latest pointer position to graph space.
@@ -911,7 +794,7 @@ where
     &style,
     ui.style(),
     ui.painter(),
-    snarl,
+    treeize,
   );
 
   let mut node_moved = None;
@@ -954,20 +837,20 @@ where
 
   let mut pin_hovered = None;
 
-  let draw_order = snarl_state.update_draw_order(snarl);
+  let draw_order = snarl_state.update_draw_order(treeize);
   let mut drag_released = false;
 
   let mut nodes_bb = Rect::NOTHING;
   let mut node_rects = Vec::new();
 
   for node_idx in draw_order {
-    if !snarl.nodes.contains(node_idx.0) {
+    if !treeize.nodes.contains(node_idx.0) {
       continue;
     }
 
     // show_node(node_idx);
     let response = draw_node(
-      snarl,
+      treeize,
       &mut ui,
       node_idx,
       viewer,
@@ -1003,7 +886,7 @@ where
   let mut wire_shapes = Vec::new();
 
   // Draw and interact with wires
-  for wire in snarl.wires.iter() {
+  for wire in treeize.wires.iter() {
     let Some(from_r) = output_info.get(&wire.out_pin) else {
       continue;
     };
@@ -1065,9 +948,9 @@ where
 
   // Remove hovered wire by second click
   if hovered_wire_disconnect && let Some(wire) = hovered_wire {
-    let out_pin = OutPin::new(snarl, wire.out_pin);
-    let in_pin = InPin::new(snarl, wire.in_pin);
-    viewer.disconnect(&out_pin, &in_pin, snarl);
+    let out_pin = OutPin::new(treeize, wire.out_pin);
+    let in_pin = InPin::new(treeize, wire.in_pin);
+    viewer.disconnect(&out_pin, &in_pin, treeize);
   }
 
   if let Some(select_rect) = rect_selection_ended {
@@ -1130,12 +1013,12 @@ where
     match (new_wires, pin_hovered) {
       (Some(NewWires::In(in_pins)), Some(AnyPin::Out(out_pin))) => {
         for in_pin in in_pins {
-          viewer.connect(&OutPin::new(snarl, out_pin), &InPin::new(snarl, in_pin), snarl);
+          viewer.connect(&OutPin::new(treeize, out_pin), &InPin::new(treeize, in_pin), treeize);
         }
       }
       (Some(NewWires::Out(out_pins)), Some(AnyPin::In(in_pin))) => {
         for out_pin in out_pins {
-          viewer.connect(&OutPin::new(snarl, out_pin), &InPin::new(snarl, in_pin), snarl);
+          viewer.connect(&OutPin::new(treeize, out_pin), &InPin::new(treeize, in_pin), treeize);
         }
       }
       (Some(new_wires), None) if snarl_resp.hovered() => {
@@ -1144,7 +1027,7 @@ where
           NewWires::Out(x) => AnyPins::Out(x),
         };
 
-        if viewer.has_dropped_wire_menu(pins, snarl) {
+        if viewer.has_dropped_wire_menu(pins, treeize) {
           // A wire is dropped without connecting to a pin.
           // Show context menu for the wire drop.
           snarl_state.set_new_wires_menu(new_wires);
@@ -1164,7 +1047,7 @@ where
         NewWires::Out(x) => AnyPins::Out(x),
       };
 
-      if viewer.has_dropped_wire_menu(pins, snarl) {
+      if viewer.has_dropped_wire_menu(pins, treeize) {
         snarl_resp.context_menu(|ui| {
           let pins = match &new_wires {
             NewWires::In(x) => AnyPins::In(x),
@@ -1177,7 +1060,7 @@ where
           wire_end_pos = menu_pos;
 
           // The context menu is opened as *link* graph menu.
-          viewer.show_dropped_wire_menu(menu_pos, ui, pins, snarl);
+          viewer.show_dropped_wire_menu(menu_pos, ui, pins, treeize);
 
           // Even though menu could be closed in `show_dropped_wire_menu`,
           // we need to revert the new wires here, because menu state is inaccessible.
@@ -1185,11 +1068,11 @@ where
           snarl_state.set_new_wires_menu(new_wires);
         });
       }
-    } else if viewer.has_graph_menu(interact_pos, snarl) {
+    } else if viewer.has_graph_menu(interact_pos, treeize) {
       snarl_resp.context_menu(|ui| {
         let menu_pos = from_global * ui.cursor().min;
 
-        viewer.show_graph_menu(menu_pos, ui, snarl);
+        viewer.show_graph_menu(menu_pos, ui, treeize);
       });
     }
   }
@@ -1250,27 +1133,27 @@ where
   ui.advance_cursor_after_rect(Rect::from_min_size(snarl_resp.rect.min, Vec2::ZERO));
 
   if let Some(node) = node_to_top
-    && snarl.nodes.contains(node.0)
+    && treeize.nodes.contains(node.0)
   {
     snarl_state.node_to_top(node);
   }
 
   if let Some((node, delta)) = node_moved
-    && snarl.nodes.contains(node.0)
+    && treeize.nodes.contains(node.0)
   {
     ui.ctx().request_repaint();
     if snarl_state.selected_nodes().contains(&node) {
       for node in snarl_state.selected_nodes() {
-        let node = &mut snarl.nodes[node.0];
+        let node = &mut treeize.nodes[node.0];
         node.pos += delta;
       }
     } else {
-      let node = &mut snarl.nodes[node.0];
+      let node = &mut treeize.nodes[node.0];
       node.pos += delta;
     }
   }
 
-  snarl_state.store(snarl, ui.ctx());
+  snarl_state.store(treeize, ui.ctx());
 
   snarl_resp
 }
@@ -1278,12 +1161,12 @@ where
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::too_many_lines)]
 fn draw_inputs<T, V>(
-  snarl: &mut Snarl<T>,
+  treeize: &mut Treeize<T>,
   viewer: &mut V,
   node: NodeId,
   inputs: &[InPin],
   pin_size: f32,
-  style: &SnarlStyle,
+  style: &TreeizeStyle,
   node_ui: &mut Ui,
   inputs_rect: Rect,
   payload_clip_rect: Rect,
@@ -1337,8 +1220,8 @@ where
       let y1 = pin_ui.max_rect().max.y;
 
       // Show input content
-      let snarl_pin = viewer.show_input(in_pin, pin_ui, snarl);
-      if !snarl.nodes.contains(node.0) {
+      let snarl_pin = viewer.show_input(in_pin, pin_ui, treeize);
+      if !treeize.nodes.contains(node.0) {
         // If removed
         return;
       }
@@ -1357,8 +1240,8 @@ where
         if snarl_state.has_new_wires() {
           snarl_state.remove_new_wire_in(in_pin.id);
         } else {
-          viewer.drop_inputs(in_pin, snarl);
-          if !snarl.nodes.contains(node.0) {
+          viewer.drop_inputs(in_pin, treeize);
+          if !treeize.nodes.contains(node.0) {
             // If removed
             return;
           }
@@ -1368,8 +1251,8 @@ where
         if modifiers.command {
           snarl_state.start_new_wires_out(&in_pin.remotes);
           if !modifiers.shift {
-            snarl.drop_inputs(in_pin.id);
-            if !snarl.nodes.contains(node.0) {
+            treeize.drop_inputs(in_pin.id);
+            if !treeize.nodes.contains(node.0) {
               // If removed
               return;
             }
@@ -1424,12 +1307,12 @@ where
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::too_many_lines)]
 fn draw_outputs<T, V>(
-  snarl: &mut Snarl<T>,
+  treeize: &mut Treeize<T>,
   viewer: &mut V,
   node: NodeId,
   outputs: &[OutPin],
   pin_size: f32,
-  style: &SnarlStyle,
+  style: &TreeizeStyle,
   node_ui: &mut Ui,
   outputs_rect: Rect,
   payload_clip_rect: Rect,
@@ -1484,8 +1367,8 @@ where
       let y1 = pin_ui.max_rect().max.y;
 
       // Show output content
-      let snarl_pin = viewer.show_output(out_pin, pin_ui, snarl);
-      if !snarl.nodes.contains(node.0) {
+      let snarl_pin = viewer.show_output(out_pin, pin_ui, treeize);
+      if !treeize.nodes.contains(node.0) {
         // If removed
         return;
       }
@@ -1503,8 +1386,8 @@ where
         if snarl_state.has_new_wires() {
           snarl_state.remove_new_wire_out(out_pin.id);
         } else {
-          viewer.drop_outputs(out_pin, snarl);
-          if !snarl.nodes.contains(node.0) {
+          viewer.drop_outputs(out_pin, treeize);
+          if !treeize.nodes.contains(node.0) {
             // If removed
             return;
           }
@@ -1515,8 +1398,8 @@ where
           snarl_state.start_new_wires_in(&out_pin.remotes);
 
           if !modifiers.shift {
-            snarl.drop_outputs(out_pin.id);
-            if !snarl.nodes.contains(node.0) {
+            treeize.drop_outputs(out_pin.id);
+            if !treeize.nodes.contains(node.0) {
               // If removed
               return;
             }
@@ -1569,7 +1452,7 @@ where
 
 #[allow(clippy::too_many_arguments)]
 fn draw_body<T, V>(
-  snarl: &mut Snarl<T>,
+  treeize: &mut Treeize<T>,
   viewer: &mut V,
   node: NodeId,
   inputs: &[InPin],
@@ -1591,7 +1474,7 @@ where
 
   body_ui.shrink_clip_rect(payload_clip_rect);
 
-  viewer.show_body(node, inputs, outputs, &mut body_ui, snarl);
+  viewer.show_body(node, inputs, outputs, &mut body_ui, treeize);
 
   let final_rect = body_ui.min_rect();
   ui.expand_to_include_rect(final_rect.intersect(payload_clip_rect));
@@ -1606,12 +1489,12 @@ where
 #[allow(clippy::too_many_lines)]
 #[allow(clippy::too_many_arguments)]
 fn draw_node<T, V>(
-  snarl: &mut Snarl<T>,
+  treeize: &mut Treeize<T>,
   ui: &mut Ui,
   node: NodeId,
   viewer: &mut V,
   snarl_state: &mut SnarlState,
-  style: &SnarlStyle,
+  style: &TreeizeStyle,
   snarl_id: Id,
   input_positions: &mut HashMap<InPinId, PinResponse>,
   modifiers: Modifiers,
@@ -1620,18 +1503,18 @@ fn draw_node<T, V>(
 where
   V: SnarlViewer<T>,
 {
-  let Node { pos, open, ref value } = snarl.nodes[node.0];
+  let Node { pos, open, ref value } = treeize.nodes[node.0];
 
   // Collect pins
   let inputs_count = viewer.inputs(value);
   let outputs_count = viewer.outputs(value);
 
   let inputs = (0..inputs_count)
-    .map(|idx| InPin::new(snarl, InPinId { node, input: idx }))
+    .map(|idx| InPin::new(treeize, InPinId { node, input: idx }))
     .collect::<Vec<_>>();
 
   let outputs = (0..outputs_count)
-    .map(|idx| OutPin::new(snarl, OutPinId { node, output: idx }))
+    .map(|idx| OutPin::new(treeize, OutPinId { node, output: idx }))
     .collect::<Vec<_>>();
 
   let node_pos = pos.round_ui();
@@ -1651,10 +1534,10 @@ where
   let mut pin_hovered = None;
 
   let node_frame =
-    viewer.node_frame(style.get_node_frame(ui.style()), node, &inputs, &outputs, snarl);
+    viewer.node_frame(style.get_node_frame(ui.style()), node, &inputs, &outputs, treeize);
 
   let header_frame =
-    viewer.header_frame(style.get_header_frame(ui.style()), node, &inputs, &outputs, snarl);
+    viewer.header_frame(style.get_header_frame(ui.style()), node, &inputs, &outputs, treeize);
 
   // Rect for node + frame margin.
   let node_frame_rect = node_rect + node_frame.total_margin();
@@ -1700,25 +1583,25 @@ where
     node_to_top = Some(node);
   }
 
-  if viewer.has_node_menu(&snarl.nodes[node.0].value) {
+  if viewer.has_node_menu(&treeize.nodes[node.0].value) {
     r.context_menu(|ui| {
-      viewer.show_node_menu(node, &inputs, &outputs, ui, snarl);
+      viewer.show_node_menu(node, &inputs, &outputs, ui, treeize);
     });
   }
 
-  if !snarl.nodes.contains(node.0) {
+  if !treeize.nodes.contains(node.0) {
     node_state.clear(ui.ctx());
     // If removed
     return None;
   }
 
-  if viewer.has_on_hover_popup(&snarl.nodes[node.0].value) {
+  if viewer.has_on_hover_popup(&treeize.nodes[node.0].value) {
     r.on_hover_ui_at_pointer(|ui| {
-      viewer.show_on_hover_popup(node, &inputs, &outputs, ui, snarl);
+      viewer.show_on_hover_popup(node, &inputs, &outputs, ui, treeize);
     });
   }
 
-  if !snarl.nodes.contains(node.0) {
+  if !treeize.nodes.contains(node.0) {
     node_state.clear(ui.ctx());
     // If removed
     return None;
@@ -1734,8 +1617,8 @@ where
   let mut new_pins_size = Vec2::ZERO;
 
   let r = node_frame.show(node_ui, |ui| {
-    if viewer.has_node_style(node, &inputs, &outputs, snarl) {
-      viewer.apply_node_style(ui.style_mut(), node, &inputs, &outputs, snarl);
+    if viewer.has_node_style(node, &inputs, &outputs, treeize) {
+      viewer.apply_node_style(ui.style_mut(), node, &inputs, &outputs, treeize);
     }
 
     // Input pins' center side by X axis.
@@ -1789,15 +1672,15 @@ where
       node_rect.max,
     );
 
-    let node_layout = viewer.node_layout(style.get_node_layout(), node, &inputs, &outputs, snarl);
+    let node_layout = viewer.node_layout(style.get_node_layout(), node, &inputs, &outputs, treeize);
 
     let payload_clip_rect = Rect::from_min_max(node_rect.min, pos2(node_rect.max.x, f32::INFINITY));
 
     let pins_rect = match node_layout.kind {
-      NodeLayoutKind::Coil => {
+      NodeLayoutKind::Compact => {
         // Show input pins.
         let r = draw_inputs(
-          snarl,
+          treeize,
           viewer,
           node,
           &inputs,
@@ -1827,7 +1710,7 @@ where
         let inputs_rect = r.final_rect;
         let inputs_size = inputs_rect.size();
 
-        if !snarl.nodes.contains(node.0) {
+        if !treeize.nodes.contains(node.0) {
           // If removed
           return;
         }
@@ -1835,7 +1718,7 @@ where
         // Show output pins.
 
         let r = draw_outputs(
-          snarl,
+          treeize,
           viewer,
           node,
           &outputs,
@@ -1865,7 +1748,7 @@ where
         let outputs_rect = r.final_rect;
         let outputs_size = outputs_rect.size();
 
-        if !snarl.nodes.contains(node.0) {
+        if !treeize.nodes.contains(node.0) {
           // If removed
           return;
         }
@@ -1881,14 +1764,14 @@ where
         let mut pins_rect = inputs_rect.union(outputs_rect);
 
         // Show body if there's one.
-        if viewer.has_body(&snarl.nodes.get(node.0).unwrap().value) {
+        if viewer.has_body(&treeize.nodes.get(node.0).unwrap().value) {
           let body_rect = Rect::from_min_max(
             pos2(inputs_rect.right() + ui.spacing().item_spacing.x, payload_rect.top()),
             pos2(outputs_rect.left() - ui.spacing().item_spacing.x, payload_rect.bottom()),
           );
 
           let r = draw_body(
-            snarl,
+            treeize,
             viewer,
             node,
             &inputs,
@@ -1904,264 +1787,17 @@ where
 
           pins_rect = pins_rect.union(body_rect);
 
-          if !snarl.nodes.contains(node.0) {
+          if !treeize.nodes.contains(node.0) {
             // If removed
             return;
           }
         }
-
-        pins_rect
-      }
-      NodeLayoutKind::Sandwich => {
-        // Show input pins.
-
-        let r = draw_inputs(
-          snarl,
-          viewer,
-          node,
-          &inputs,
-          pin_size,
-          style,
-          ui,
-          payload_rect,
-          payload_clip_rect,
-          input_x,
-          node_rect.min.y,
-          node_rect.min.y + node_state.header_height(),
-          input_spacing,
-          snarl_state,
-          modifiers,
-          input_positions,
-          node_layout.input_heights(&node_state),
-        );
-
-        let new_input_heights = r.new_heights;
-
-        drag_released |= r.drag_released;
-
-        if r.pin_hovered.is_some() {
-          pin_hovered = r.pin_hovered;
-        }
-
-        let inputs_rect = r.final_rect;
-
-        new_pins_size = inputs_rect.size();
-
-        let mut next_y = inputs_rect.bottom() + ui.spacing().item_spacing.y;
-
-        if !snarl.nodes.contains(node.0) {
-          // If removed
-          return;
-        }
-
-        let mut pins_rect = inputs_rect;
-
-        // Show body if there's one.
-        if viewer.has_body(&snarl.nodes.get(node.0).unwrap().value) {
-          let body_rect = payload_rect.intersect(Rect::everything_below(next_y));
-
-          let r = draw_body(
-            snarl,
-            viewer,
-            node,
-            &inputs,
-            &outputs,
-            ui,
-            body_rect,
-            payload_clip_rect,
-            snarl_state,
-          );
-
-          let body_rect = r.final_rect;
-
-          new_pins_size.x = f32::max(new_pins_size.x, body_rect.width());
-          new_pins_size.y += body_rect.height() + ui.spacing().item_spacing.y;
-
-          if !snarl.nodes.contains(node.0) {
-            // If removed
-            return;
-          }
-
-          pins_rect = pins_rect.union(body_rect);
-          next_y = body_rect.bottom() + ui.spacing().item_spacing.y;
-        }
-
-        // Show output pins.
-
-        let outputs_rect = payload_rect.intersect(Rect::everything_below(next_y));
-
-        let r = draw_outputs(
-          snarl,
-          viewer,
-          node,
-          &outputs,
-          pin_size,
-          style,
-          ui,
-          outputs_rect,
-          payload_clip_rect,
-          output_x,
-          node_rect.min.y,
-          node_rect.min.y + node_state.header_height(),
-          output_spacing,
-          snarl_state,
-          modifiers,
-          output_positions,
-          node_layout.output_heights(&node_state),
-        );
-
-        let new_output_heights = r.new_heights;
-
-        drag_released |= r.drag_released;
-
-        if r.pin_hovered.is_some() {
-          pin_hovered = r.pin_hovered;
-        }
-
-        let outputs_rect = r.final_rect;
-
-        if !snarl.nodes.contains(node.0) {
-          // If removed
-          return;
-        }
-
-        node_state.set_input_heights(new_input_heights);
-        node_state.set_output_heights(new_output_heights);
-
-        new_pins_size.x = f32::max(new_pins_size.x, outputs_rect.width());
-        new_pins_size.y += outputs_rect.height() + ui.spacing().item_spacing.y;
-
-        pins_rect = pins_rect.union(outputs_rect);
-
-        pins_rect
-      }
-      NodeLayoutKind::FlippedSandwich => {
-        // Show input pins.
-
-        let outputs_rect = payload_rect;
-        let r = draw_outputs(
-          snarl,
-          viewer,
-          node,
-          &outputs,
-          pin_size,
-          style,
-          ui,
-          outputs_rect,
-          payload_clip_rect,
-          output_x,
-          node_rect.min.y,
-          node_rect.min.y + node_state.header_height(),
-          output_spacing,
-          snarl_state,
-          modifiers,
-          output_positions,
-          node_layout.output_heights(&node_state),
-        );
-
-        let new_output_heights = r.new_heights;
-
-        drag_released |= r.drag_released;
-
-        if r.pin_hovered.is_some() {
-          pin_hovered = r.pin_hovered;
-        }
-
-        let outputs_rect = r.final_rect;
-
-        new_pins_size = outputs_rect.size();
-
-        let mut next_y = outputs_rect.bottom() + ui.spacing().item_spacing.y;
-
-        if !snarl.nodes.contains(node.0) {
-          // If removed
-          return;
-        }
-
-        let mut pins_rect = outputs_rect;
-
-        // Show body if there's one.
-        if viewer.has_body(&snarl.nodes.get(node.0).unwrap().value) {
-          let body_rect = payload_rect.intersect(Rect::everything_below(next_y));
-
-          let r = draw_body(
-            snarl,
-            viewer,
-            node,
-            &inputs,
-            &outputs,
-            ui,
-            body_rect,
-            payload_clip_rect,
-            snarl_state,
-          );
-
-          let body_rect = r.final_rect;
-
-          new_pins_size.x = f32::max(new_pins_size.x, body_rect.width());
-          new_pins_size.y += body_rect.height() + ui.spacing().item_spacing.y;
-
-          if !snarl.nodes.contains(node.0) {
-            // If removed
-            return;
-          }
-
-          pins_rect = pins_rect.union(body_rect);
-          next_y = body_rect.bottom() + ui.spacing().item_spacing.y;
-        }
-
-        // Show output pins.
-
-        let inputs_rect = payload_rect.intersect(Rect::everything_below(next_y));
-
-        let r = draw_inputs(
-          snarl,
-          viewer,
-          node,
-          &inputs,
-          pin_size,
-          style,
-          ui,
-          inputs_rect,
-          payload_clip_rect,
-          input_x,
-          node_rect.min.y,
-          node_rect.min.y + node_state.header_height(),
-          input_spacing,
-          snarl_state,
-          modifiers,
-          input_positions,
-          node_layout.input_heights(&node_state),
-        );
-
-        let new_input_heights = r.new_heights;
-
-        drag_released |= r.drag_released;
-
-        if r.pin_hovered.is_some() {
-          pin_hovered = r.pin_hovered;
-        }
-
-        let inputs_rect = r.final_rect;
-
-        if !snarl.nodes.contains(node.0) {
-          // If removed
-          return;
-        }
-
-        node_state.set_input_heights(new_input_heights);
-        node_state.set_output_heights(new_output_heights);
-
-        new_pins_size.x = f32::max(new_pins_size.x, inputs_rect.width());
-        new_pins_size.y += inputs_rect.height() + ui.spacing().item_spacing.y;
-
-        pins_rect = pins_rect.union(inputs_rect);
 
         pins_rect
       }
     };
 
-    if viewer.has_footer(&snarl.nodes[node.0].value) {
+    if viewer.has_footer(&treeize.nodes[node.0].value) {
       let footer_rect = Rect::from_min_max(
         pos2(node_rect.left(), pins_rect.bottom() + ui.spacing().item_spacing.y),
         pos2(node_rect.right(), node_rect.bottom()),
@@ -2175,7 +1811,7 @@ where
       );
       footer_ui.shrink_clip_rect(payload_clip_rect);
 
-      viewer.show_footer(node, &inputs, &outputs, &mut footer_ui, snarl);
+      viewer.show_footer(node, &inputs, &outputs, &mut footer_ui, treeize);
 
       let final_rect = footer_ui.min_rect();
       ui.expand_to_include_rect(final_rect.intersect(payload_clip_rect));
@@ -2184,7 +1820,7 @@ where
       new_pins_size.x = f32::max(new_pins_size.x, footer_size.x);
       new_pins_size.y += footer_size.y + ui.spacing().item_spacing.y;
 
-      if !snarl.nodes.contains(node.0) {
+      if !treeize.nodes.contains(node.0) {
         // If removed
         return;
       }
@@ -2214,13 +1850,13 @@ where
 
           if r.clicked_by(PointerButton::Primary) {
             // Toggle node's openness.
-            snarl.open_node(node, !open);
+            treeize.open_node(node, !open);
           }
         }
 
         ui.allocate_exact_size(header_drag_space, Sense::hover());
 
-        viewer.show_header(node, &inputs, &outputs, ui, snarl);
+        viewer.show_header(node, &inputs, &outputs, ui, treeize);
 
         header_rect = ui.min_rect();
       });
@@ -2246,14 +1882,14 @@ where
     ));
   });
 
-  if !snarl.nodes.contains(node.0) {
+  if !treeize.nodes.contains(node.0) {
     ui.ctx().request_repaint();
     node_state.clear(ui.ctx());
     // If removed
     return None;
   }
 
-  viewer.final_node_rect(node, r.response.rect, ui, snarl);
+  viewer.final_node_rect(node, r.response.rect, ui, treeize);
 
   node_state.store(ui.ctx());
   Some(DrawNodeResponse {
@@ -2276,78 +1912,10 @@ const fn mix_colors(a: Color32, b: Color32) -> Color32 {
   )
 }
 
-// fn mix_colors(mut colors: impl Iterator<Item = Color32>) -> Option<Color32> {
-//     let color = colors.next()?;
-
-//     let mut r = color.r() as u32;
-//     let mut g = color.g() as u32;
-//     let mut b = color.b() as u32;
-//     let mut a = color.a() as u32;
-//     let mut w = 1;
-
-//     for c in colors {
-//         r += c.r() as u32;
-//         g += c.g() as u32;
-//         b += c.b() as u32;
-//         a += c.a() as u32;
-//         w += 1;
-//     }
-
-//     Some(Color32::from_rgba_premultiplied(
-//         (r / w) as u8,
-//         (g / w) as u8,
-//         (b / w) as u8,
-//         (a / w) as u8,
-//     ))
-// }
-
-// fn mix_sizes(mut sizes: impl Iterator<Item = f32>) -> Option<f32> {
-//     let mut size = sizes.next()?;
-//     let mut w = 1;
-
-//     for s in sizes {
-//         size += s;
-//         w += 1;
-//     }
-
-//     Some(size / w as f32)
-// }
-
-// fn mix_strokes(mut strokes: impl Iterator<Item = Stroke>) -> Option<Stroke> {
-//     let stoke = strokes.next()?;
-
-//     let mut width = stoke.width;
-//     let mut r = stoke.color.r() as u32;
-//     let mut g = stoke.color.g() as u32;
-//     let mut b = stoke.color.b() as u32;
-//     let mut a = stoke.color.a() as u32;
-
-//     let mut w = 1;
-
-//     for s in strokes {
-//         width += s.width;
-//         r += s.color.r() as u32;
-//         g += s.color.g() as u32;
-//         b += s.color.b() as u32;
-//         a += s.color.a() as u32;
-//         w += 1;
-//     }
-
-//     Some(Stroke {
-//         width: width / w as f32,
-//         color: Color32::from_rgba_premultiplied(
-//             (r / w) as u8,
-//             (g / w) as u8,
-//             (b / w) as u8,
-//             (a / w) as u8,
-//         ),
-//     })
-// }
-
-impl<T> Snarl<T> {
-  /// Render [`Snarl`] using given viewer and style into the [`Ui`].
+impl<T> Treeize<T> {
+  /// Render [`Treeize`] using given viewer and style into the [`Ui`].
   #[inline]
-  pub fn show<V>(&mut self, viewer: &mut V, style: &SnarlStyle, id_salt: impl Hash, ui: &mut Ui)
+  pub fn show<V>(&mut self, viewer: &mut V, style: &TreeizeStyle, id_salt: impl Hash, ui: &mut Ui)
   where
     V: SnarlViewer<T>,
   {
@@ -2389,5 +1957,5 @@ fn scale_transform_around(transform: &TSTransform, scaling: f32, point: Pos2) ->
 #[test]
 const fn snarl_style_is_send_sync() {
   const fn is_send_sync<T: Send + Sync>() {}
-  is_send_sync::<SnarlStyle>();
+  is_send_sync::<TreeizeStyle>();
 }

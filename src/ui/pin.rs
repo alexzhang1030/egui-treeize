@@ -2,7 +2,7 @@ use egui::{Color32, Painter, Rect, Shape, Stroke, Style, Vec2, epaint::PathShape
 
 use crate::{InPinId, OutPinId};
 
-use super::{SnarlStyle, WireStyle};
+use super::{TreeizeStyle, WireStyle};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AnyPin {
@@ -53,7 +53,7 @@ pub trait SnarlPin {
   #[must_use]
   fn draw(
     self,
-    snarl_style: &SnarlStyle,
+    snarl_style: &TreeizeStyle,
     style: &Style,
     rect: Rect,
     painter: &Painter,
@@ -167,19 +167,19 @@ impl PinInfo {
 
   /// Returns the shape of the pin.
   #[must_use]
-  pub fn get_shape(&self, snarl_style: &SnarlStyle) -> PinShape {
+  pub fn get_shape(&self, snarl_style: &TreeizeStyle) -> PinShape {
     self.shape.unwrap_or_else(|| snarl_style.get_pin_shape())
   }
 
   /// Returns fill color of the pin.
   #[must_use]
-  pub fn get_fill(&self, snarl_style: &SnarlStyle, style: &Style) -> Color32 {
+  pub fn get_fill(&self, snarl_style: &TreeizeStyle, style: &Style) -> Color32 {
     self.fill.unwrap_or_else(|| snarl_style.get_pin_fill(style))
   }
 
   /// Returns outline stroke of the pin.
   #[must_use]
-  pub fn get_stroke(&self, snarl_style: &SnarlStyle, style: &Style) -> Stroke {
+  pub fn get_stroke(&self, snarl_style: &TreeizeStyle, style: &Style) -> Stroke {
     self.stroke.unwrap_or_else(|| snarl_style.get_pin_stroke(style))
   }
 
@@ -189,7 +189,7 @@ impl PinInfo {
   #[must_use]
   pub fn draw(
     &self,
-    snarl_style: &SnarlStyle,
+    snarl_style: &TreeizeStyle,
     style: &Style,
     rect: Rect,
     painter: &Painter,
@@ -209,7 +209,7 @@ impl PinInfo {
 impl SnarlPin for PinInfo {
   fn draw(
     self,
-    snarl_style: &SnarlStyle,
+    snarl_style: &TreeizeStyle,
     style: &Style,
     rect: Rect,
     painter: &Painter,

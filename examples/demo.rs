@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use eframe::{App, CreationContext};
 use egui::{Color32, Id, Ui};
 use egui_treeize::{
-  InPin, InPinId, NodeId, OutPin, OutPinId, Snarl,
+  InPin, InPinId, NodeId, OutPin, OutPinId, Treeize,
   ui::{
-    AnyPins, NodeLayout, PinInfo, PinPlacement, SnarlStyle, SnarlViewer, SnarlWidget, WireStyle,
+    AnyPins, NodeLayout, PinInfo, PinPlacement, SnarlViewer, SnarlWidget, TreeizeStyle, WireStyle,
     get_selected_nodes,
   },
 };
@@ -99,10 +99,10 @@ struct DemoViewer;
 
 impl SnarlViewer<DemoNode> for DemoViewer {
   #[inline]
-  fn connect(&mut self, from: &OutPin, to: &InPin, snarl: &mut Snarl<DemoNode>) {
+  fn connect(&mut self, from: &OutPin, to: &InPin, treeize: &mut Treeize<DemoNode>) {
     // Validate connection
     #[allow(clippy::match_same_arms)] // For match clarity
-    match (&snarl[from.id.node], &snarl[to.id.node]) {
+    match (&treeize[from.id.node], &treeize[to.id.node]) {
       (DemoNode::Sink, _) => {
         unreachable!("Sink node has no outputs")
       }
@@ -141,10 +141,10 @@ impl SnarlViewer<DemoNode> for DemoViewer {
     }
 
     for &remote in &to.remotes {
-      snarl.disconnect(remote, to.id);
+      treeize.disconnect(remote, to.id);
     }
 
-    snarl.connect(from.id, to.id);
+    treeize.connect(from.id, to.id);
   }
 
   fn title(&mut self, node: &DemoNode) -> String {
@@ -177,8 +177,8 @@ impl SnarlViewer<DemoNode> for DemoViewer {
 
   #[allow(clippy::too_many_lines)]
   #[allow(refining_impl_trait)]
-  fn show_input(&mut self, pin: &InPin, ui: &mut Ui, snarl: &mut Snarl<DemoNode>) -> PinInfo {
-    match snarl[pin.id.node] {
+  fn show_input(&mut self, pin: &InPin, ui: &mut Ui, treeize: &mut Treeize<DemoNode>) -> PinInfo {
+    match treeize[pin.id.node] {
       DemoNode::Sink => {
         assert_eq!(pin.id.input, 0, "Sink node has only one input");
 
@@ -187,7 +187,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
             ui.label("None");
             PinInfo::circle().with_fill(UNTYPED_COLOR)
           }
-          [remote] => match snarl[remote.node] {
+          [remote] => match treeize[remote.node] {
             DemoNode::Sink => unreachable!("Sink node has no outputs"),
             DemoNode::Number(value) => {
               assert_eq!(remote.output, 0, "Number node has only one output");
@@ -227,7 +227,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
       }
       DemoNode::ShowImage(_) => match &*pin.remotes {
         [] => {
-          let input = snarl[pin.id.node].string_in();
+          let input = treeize[pin.id.node].string_in();
           egui::TextEdit::singleline(input)
             .clip_text(false)
             .desired_width(0.0)
@@ -238,7 +238,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
             .with_wire_style(WireStyle::AxisAligned { corner_radius: 10.0 })
         }
         [remote] => {
-          let new_value = snarl[remote.node].string_out().to_owned();
+          let new_value = treeize[remote.node].string_out().to_owned();
 
           egui::TextEdit::singleline(&mut &*new_value)
             .clip_text(false)
@@ -246,7 +246,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
             .margin(ui.spacing().item_spacing)
             .show(ui);
 
-          let input = snarl[pin.id.node].string_in();
+          let input = treeize[pin.id.node].string_in();
           *input = new_value;
 
           PinInfo::circle()
@@ -258,7 +258,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
       DemoNode::ExprNode(_) if pin.id.input == 0 => {
         let changed = match &*pin.remotes {
           [] => {
-            let input = snarl[pin.id.node].string_in();
+            let input = treeize[pin.id.node].string_in();
             let r = egui::TextEdit::singleline(input)
               .clip_text(false)
               .desired_width(0.0)
@@ -269,7 +269,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
             r.changed()
           }
           [remote] => {
-            let new_string = snarl[remote.node].string_out().to_owned();
+            let new_string = treeize[remote.node].string_out().to_owned();
 
             egui::TextEdit::singleline(&mut &*new_string)
               .clip_text(false)
@@ -277,7 +277,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
               .margin(ui.spacing().item_spacing)
               .show(ui);
 
-            let input = snarl[pin.id.node].string_in();
+            let input = treeize[pin.id.node].string_in();
             if new_string == *input {
               false
             } else {
@@ -289,7 +289,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
         };
 
         if changed {
-          let expr_node = snarl[pin.id.node].expr_node();
+          let expr_node = treeize[pin.id.node].expr_node();
 
           if let Ok(expr) = syn::parse_str(&expr_node.text) {
             expr_node.expr = expr;
@@ -313,7 +313,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
             expr_node.values = new_values;
 
             let old_inputs = (0..old_bindings.len())
-              .map(|idx| snarl.in_pin(InPinId { node: pin.id.node, input: idx + 1 }))
+              .map(|idx| treeize.in_pin(InPinId { node: pin.id.node, input: idx + 1 }))
               .collect::<Vec<_>>();
 
             for (idx, name) in old_bindings.iter().enumerate() {
@@ -321,13 +321,13 @@ impl SnarlViewer<DemoNode> for DemoViewer {
 
               match new_idx {
                 None => {
-                  snarl.drop_inputs(old_inputs[idx].id);
+                  treeize.drop_inputs(old_inputs[idx].id);
                 }
                 Some(new_idx) if new_idx != idx => {
                   let new_in_pin = InPinId { node: pin.id.node, input: new_idx };
                   for &remote in &old_inputs[idx].remotes {
-                    snarl.disconnect(remote, old_inputs[idx].id);
-                    snarl.connect(remote, new_in_pin);
+                    treeize.disconnect(remote, old_inputs[idx].id);
+                    treeize.connect(remote, new_in_pin);
                   }
                 }
                 _ => {}
@@ -343,14 +343,14 @@ impl SnarlViewer<DemoNode> for DemoViewer {
         if pin.id.input <= expr_node.bindings.len() {
           match &*pin.remotes {
             [] => {
-              let node = &mut snarl[pin.id.node];
+              let node = &mut treeize[pin.id.node];
               ui.label(node.label_in(pin.id.input));
               ui.add(egui::DragValue::new(node.number_in(pin.id.input)));
               PinInfo::circle().with_fill(NUMBER_COLOR)
             }
             [remote] => {
-              let new_value = snarl[remote.node].number_out();
-              let node = &mut snarl[pin.id.node];
+              let new_value = treeize[remote.node].number_out();
+              let node = &mut treeize[pin.id.node];
               ui.label(node.label_in(pin.id.input));
               ui.label(format_float(new_value));
               *node.number_in(pin.id.input) = new_value;
@@ -367,8 +367,8 @@ impl SnarlViewer<DemoNode> for DemoViewer {
   }
 
   #[allow(refining_impl_trait)]
-  fn show_output(&mut self, pin: &OutPin, ui: &mut Ui, snarl: &mut Snarl<DemoNode>) -> PinInfo {
-    match snarl[pin.id.node] {
+  fn show_output(&mut self, pin: &OutPin, ui: &mut Ui, treeize: &mut Treeize<DemoNode>) -> PinInfo {
+    match treeize[pin.id.node] {
       DemoNode::Sink => {
         unreachable!("Sink node has no outputs")
       }
@@ -401,35 +401,35 @@ impl SnarlViewer<DemoNode> for DemoViewer {
     }
   }
 
-  fn has_graph_menu(&mut self, _pos: egui::Pos2, _snarl: &mut Snarl<DemoNode>) -> bool {
+  fn has_graph_menu(&mut self, _pos: egui::Pos2, _snarl: &mut Treeize<DemoNode>) -> bool {
     true
   }
 
-  fn show_graph_menu(&mut self, pos: egui::Pos2, ui: &mut Ui, snarl: &mut Snarl<DemoNode>) {
+  fn show_graph_menu(&mut self, pos: egui::Pos2, ui: &mut Ui, treeize: &mut Treeize<DemoNode>) {
     ui.label("Add node");
     if ui.button("Number").clicked() {
-      snarl.insert_node(pos, DemoNode::Number(0.0));
+      treeize.insert_node(pos, DemoNode::Number(0.0));
       ui.close();
     }
     if ui.button("Expr").clicked() {
-      snarl.insert_node(pos, DemoNode::ExprNode(ExprNode::new()));
+      treeize.insert_node(pos, DemoNode::ExprNode(ExprNode::new()));
       ui.close();
     }
     if ui.button("String").clicked() {
-      snarl.insert_node(pos, DemoNode::String(String::new()));
+      treeize.insert_node(pos, DemoNode::String(String::new()));
       ui.close();
     }
     if ui.button("Show image").clicked() {
-      snarl.insert_node(pos, DemoNode::ShowImage(String::new()));
+      treeize.insert_node(pos, DemoNode::ShowImage(String::new()));
       ui.close();
     }
     if ui.button("Sink").clicked() {
-      snarl.insert_node(pos, DemoNode::Sink);
+      treeize.insert_node(pos, DemoNode::Sink);
       ui.close();
     }
   }
 
-  fn has_dropped_wire_menu(&mut self, _src_pins: AnyPins, _snarl: &mut Snarl<DemoNode>) -> bool {
+  fn has_dropped_wire_menu(&mut self, _src_pins: AnyPins, _snarl: &mut Treeize<DemoNode>) -> bool {
     true
   }
 
@@ -438,7 +438,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
     pos: egui::Pos2,
     ui: &mut Ui,
     src_pins: AnyPins,
-    snarl: &mut Snarl<DemoNode>,
+    treeize: &mut Treeize<DemoNode>,
   ) {
     // In this demo, we create a context-aware node graph menu, and connect a wire
     // dropped on the fly based on user input to a new node created.
@@ -486,7 +486,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
         }
 
         let src_pin = src_pins[0];
-        let src_out_ty = pin_out_compat(snarl.get_node(src_pin.node).unwrap());
+        let src_out_ty = pin_out_compat(treeize.get_node(src_pin.node).unwrap());
         let dst_in_candidates = [
           ("Sink", (|| DemoNode::Sink) as fn() -> DemoNode, PIN_SINK),
           ("Show Image", || DemoNode::ShowImage(String::new()), PIN_STR),
@@ -496,11 +496,11 @@ impl SnarlViewer<DemoNode> for DemoViewer {
         for (name, ctor, in_ty) in dst_in_candidates {
           if src_out_ty & in_ty != 0 && ui.button(name).clicked() {
             // Create new node.
-            let new_node = snarl.insert_node(pos, ctor());
+            let new_node = treeize.insert_node(pos, ctor());
             let dst_pin = InPinId { node: new_node, input: 0 };
 
             // Connect the wire.
-            snarl.connect(src_pin, dst_pin);
+            treeize.connect(src_pin, dst_pin);
             ui.close();
           }
         }
@@ -508,7 +508,7 @@ impl SnarlViewer<DemoNode> for DemoViewer {
       AnyPins::In(pins) => {
         let all_src_types = pins
           .iter()
-          .fold(0, |acc, pin| acc | pin_in_compat(snarl.get_node(pin.node).unwrap(), pin.input));
+          .fold(0, |acc, pin| acc | pin_in_compat(treeize.get_node(pin.node).unwrap(), pin.input));
 
         let dst_out_candidates = [
           ("Number", (|| DemoNode::Number(0.)) as fn() -> DemoNode, PIN_NUM),
@@ -523,17 +523,17 @@ impl SnarlViewer<DemoNode> for DemoViewer {
             let new_node = ctor();
             let dst_ty = pin_out_compat(&new_node);
 
-            let new_node = snarl.insert_node(pos, new_node);
+            let new_node = treeize.insert_node(pos, new_node);
             let dst_pin = OutPinId { node: new_node, output: 0 };
 
             // Connect the wire.
             for src_pin in pins {
-              let src_ty = pin_in_compat(snarl.get_node(src_pin.node).unwrap(), src_pin.input);
+              let src_ty = pin_in_compat(treeize.get_node(src_pin.node).unwrap(), src_pin.input);
               if src_ty & dst_ty != 0 {
                 // In this demo, input pin MUST be unique ...
                 // Therefore here we drop inputs of source input pin.
-                snarl.drop_inputs(*src_pin);
-                snarl.connect(dst_pin, *src_pin);
+                treeize.drop_inputs(*src_pin);
+                treeize.connect(dst_pin, *src_pin);
                 ui.close();
               }
             }
@@ -553,11 +553,11 @@ impl SnarlViewer<DemoNode> for DemoViewer {
     _inputs: &[InPin],
     _outputs: &[OutPin],
     ui: &mut Ui,
-    snarl: &mut Snarl<DemoNode>,
+    treeize: &mut Treeize<DemoNode>,
   ) {
     ui.label("Node menu");
     if ui.button("Remove").clicked() {
-      snarl.remove_node(node);
+      treeize.remove_node(node);
       ui.close();
     }
   }
@@ -572,9 +572,9 @@ impl SnarlViewer<DemoNode> for DemoViewer {
     _inputs: &[InPin],
     _outputs: &[OutPin],
     ui: &mut Ui,
-    snarl: &mut Snarl<DemoNode>,
+    treeize: &mut Treeize<DemoNode>,
   ) {
-    match snarl[node] {
+    match treeize[node] {
       DemoNode::Sink => {
         ui.label("Displays anything connected to it");
       }
@@ -599,9 +599,9 @@ impl SnarlViewer<DemoNode> for DemoViewer {
     node: NodeId,
     _inputs: &[InPin],
     _outputs: &[OutPin],
-    snarl: &Snarl<DemoNode>,
+    treeize: &Treeize<DemoNode>,
   ) -> egui::Frame {
-    match snarl[node] {
+    match treeize[node] {
       DemoNode::Sink => frame.fill(egui::Color32::from_rgb(70, 70, 80)),
       DemoNode::Number(_) => frame.fill(egui::Color32::from_rgb(70, 40, 40)),
       DemoNode::String(_) => frame.fill(egui::Color32::from_rgb(40, 70, 40)),
@@ -872,12 +872,12 @@ impl Expr {
 }
 
 pub struct DemoApp {
-  snarl: Snarl<DemoNode>,
-  style: SnarlStyle,
+  treeize: Treeize<DemoNode>,
+  style: TreeizeStyle,
 }
 
-const fn default_style() -> SnarlStyle {
-  SnarlStyle {
+const fn default_style() -> TreeizeStyle {
+  TreeizeStyle {
     node_layout: Some(NodeLayout::coil()),
     pin_placement: Some(PinPlacement::Edge),
     pin_size: Some(7.0),
@@ -897,7 +897,7 @@ const fn default_style() -> SnarlStyle {
       stroke: egui::Stroke::NONE,
       shadow: egui::Shadow::NONE,
     }),
-    ..SnarlStyle::new()
+    ..TreeizeStyle::new()
   }
 }
 
@@ -907,13 +907,13 @@ impl DemoApp {
 
     cx.egui_ctx.style_mut(|style| style.animation_time *= 10.0);
 
-    let snarl = cx.storage.map_or_else(Snarl::new, |storage| {
+    let treeize = cx.storage.map_or_else(Treeize::new, |storage| {
       storage
-        .get_string("snarl")
-        .and_then(|snarl| serde_json::from_str(&snarl).ok())
+        .get_string("treeize")
+        .and_then(|treeize| serde_json::from_str(&treeize).ok())
         .unwrap_or_default()
     });
-    // let snarl = Snarl::new();
+    // let treeize = Treeize::new();
 
     let style = cx.storage.map_or_else(default_style, |storage| {
       storage
@@ -921,9 +921,9 @@ impl DemoApp {
         .and_then(|style| serde_json::from_str(&style).ok())
         .unwrap_or_else(default_style)
     });
-    // let style = SnarlStyle::new();
+    // let style = TreeizeStyle::new();
 
-    DemoApp { snarl, style }
+    DemoApp { treeize, style }
   }
 }
 
@@ -946,7 +946,7 @@ impl App for DemoApp {
         egui::widgets::global_theme_preference_switch(ui);
 
         if ui.button("Clear All").clicked() {
-          self.snarl = Snarl::default();
+          self.treeize = Treeize::default();
         }
       });
     });
@@ -963,7 +963,8 @@ impl App for DemoApp {
 
         let selected = get_selected_nodes(Id::new("snarl-demo"), ui.ctx());
 
-        let mut selected = selected.into_iter().map(|id| (id, &self.snarl[id])).collect::<Vec<_>>();
+        let mut selected =
+          selected.into_iter().map(|id| (id, &self.treeize[id])).collect::<Vec<_>>();
 
         selected.sort_by_key(|(id, _)| *id);
 
@@ -981,14 +982,14 @@ impl App for DemoApp {
         }
 
         if let Some(id) = remove {
-          self.snarl.remove_node(id);
+          self.treeize.remove_node(id);
         }
       });
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {
       SnarlWidget::new().id(Id::new("snarl-demo")).style(self.style).show(
-        &mut self.snarl,
+        &mut self.treeize,
         &mut DemoViewer,
         ui,
       );
@@ -996,8 +997,8 @@ impl App for DemoApp {
   }
 
   fn save(&mut self, storage: &mut dyn eframe::Storage) {
-    let snarl = serde_json::to_string(&self.snarl).unwrap();
-    storage.set_string("snarl", snarl);
+    let treeize = serde_json::to_string(&self.treeize).unwrap();
+    storage.set_string("treeize", treeize);
 
     let style = serde_json::to_string(&self.style).unwrap();
     storage.set_string("style", style);
@@ -1015,7 +1016,7 @@ fn main() -> eframe::Result<()> {
   };
 
   eframe::run_native(
-    "egui-snarl demo",
+    "egui-treeize demo",
     native_options,
     Box::new(|cx| Ok(Box::new(DemoApp::new(cx)))),
   )

@@ -16,9 +16,9 @@ use std::ops::{Index, IndexMut};
 use egui::{Pos2, ahash::HashSet};
 use slab::Slab;
 
-impl<T> Default for Snarl<T> {
+impl<T> Default for Treeize<T> {
   fn default() -> Self {
-    Snarl::new()
+    Treeize::new()
   }
 }
 
@@ -179,41 +179,41 @@ impl Wires {
   }
 }
 
-/// Snarl is generic node-graph container.
+/// Treeize is generic node-graph container.
 ///
 /// It holds graph state - positioned nodes and wires between their pins.
-/// It can be rendered using [`Snarl::show`].
+/// It can be rendered using [`Treeize::show`].
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Snarl<T> {
+pub struct Treeize<T> {
   // #[cfg_attr(feature = "serde", serde(with = "serde_nodes"))]
   nodes: Slab<Node<T>>,
   wires: Wires,
 }
 
-impl<T> Snarl<T> {
-  /// Create a new empty Snarl.
+impl<T> Treeize<T> {
+  /// Create a new empty Treeize.
   ///
   /// # Examples
   ///
   /// ```
-  /// # use egui_snarl::Snarl;
-  /// let snarl = Snarl::<()>::new();
+  /// # use egui_snarl::Treeize;
+  /// let treeize = Treeize::<()>::new();
   /// ```
   #[must_use]
   pub fn new() -> Self {
-    Snarl { nodes: Slab::new(), wires: Wires::new() }
+    Treeize { nodes: Slab::new(), wires: Wires::new() }
   }
 
-  /// Adds a node to the Snarl.
+  /// Adds a node to the Treeize.
   /// Returns the index of the node.
   ///
   /// # Examples
   ///
   /// ```
-  /// # use egui_snarl::Snarl;
-  /// let mut snarl = Snarl::<()>::new();
-  /// snarl.insert_node(egui::pos2(0.0, 0.0), ());
+  /// # use egui_snarl::Treeize;
+  /// let mut treeize = Treeize::<()>::new();
+  /// treeize.insert_node(egui::pos2(0.0, 0.0), ());
   /// ```
   pub fn insert_node(&mut self, pos: egui::Pos2, node: T) -> NodeId {
     let idx = self.nodes.insert(Node { value: node, pos, open: true });
@@ -221,15 +221,15 @@ impl<T> Snarl<T> {
     NodeId(idx)
   }
 
-  /// Adds a node to the Snarl in collapsed state.
+  /// Adds a node to the Treeize in collapsed state.
   /// Returns the index of the node.
   ///
   /// # Examples
   ///
   /// ```
-  /// # use egui_snarl::Snarl;
-  /// let mut snarl = Snarl::<()>::new();
-  /// snarl.insert_node_collapsed(egui::pos2(0.0, 0.0), ());
+  /// # use egui_snarl::Treeize;
+  /// let mut treeize = Treeize::<()>::new();
+  /// treeize.insert_node_collapsed(egui::pos2(0.0, 0.0), ());
   /// ```
   pub fn insert_node_collapsed(&mut self, pos: egui::Pos2, node: T) -> NodeId {
     let idx = self.nodes.insert(Node { value: node, pos, open: false });
@@ -247,7 +247,7 @@ impl<T> Snarl<T> {
     self.nodes[node.0].open = open;
   }
 
-  /// Removes a node from the Snarl.
+  /// Removes a node from the Treeize.
   /// Returns the node if it was removed.
   ///
   /// # Panics
@@ -257,10 +257,10 @@ impl<T> Snarl<T> {
   /// # Examples
   ///
   /// ```
-  /// # use egui_snarl::Snarl;
-  /// let mut snarl = Snarl::<()>::new();
-  /// let node = snarl.insert_node(egui::pos2(0.0, 0.0), ());
-  /// snarl.remove_node(node);
+  /// # use egui_snarl::Treeize;
+  /// let mut treeize = Treeize::<()>::new();
+  /// let node = treeize.insert_node(egui::pos2(0.0, 0.0), ());
+  /// treeize.remove_node(node);
   /// ```
   #[track_caller]
   pub fn remove_node(&mut self, idx: NodeId) -> T {
@@ -429,7 +429,7 @@ impl<T> Snarl<T> {
   }
 }
 
-impl<T> Index<NodeId> for Snarl<T> {
+impl<T> Index<NodeId> for Treeize<T> {
   type Output = T;
 
   #[inline]
@@ -439,7 +439,7 @@ impl<T> Index<NodeId> for Snarl<T> {
   }
 }
 
-impl<T> IndexMut<NodeId> for Snarl<T> {
+impl<T> IndexMut<NodeId> for Treeize<T> {
   #[inline]
   #[track_caller]
   fn index_mut(&mut self, idx: NodeId) -> &mut Self::Output {
@@ -756,13 +756,13 @@ pub struct InPin {
 }
 
 impl OutPin {
-  fn new<T>(snarl: &Snarl<T>, pin: OutPinId) -> Self {
-    OutPin { id: pin, remotes: snarl.wires.wired_inputs(pin).collect() }
+  fn new<T>(treeize: &Treeize<T>, pin: OutPinId) -> Self {
+    OutPin { id: pin, remotes: treeize.wires.wired_inputs(pin).collect() }
   }
 }
 
 impl InPin {
-  fn new<T>(snarl: &Snarl<T>, pin: InPinId) -> Self {
-    InPin { id: pin, remotes: snarl.wires.wired_outputs(pin).collect() }
+  fn new<T>(treeize: &Treeize<T>, pin: InPinId) -> Self {
+    InPin { id: pin, remotes: treeize.wires.wired_outputs(pin).collect() }
   }
 }

@@ -1,6 +1,6 @@
 use egui_scale::EguiScale;
 
-use super::{BackgroundPattern, PinPlacement, SelectionStyle, SnarlStyle, WireStyle};
+use super::{BackgroundPattern, PinPlacement, SelectionStyle, TreeizeStyle, WireStyle};
 
 impl EguiScale for WireStyle {
   #[inline(always)]
@@ -39,7 +39,7 @@ impl EguiScale for BackgroundPattern {
   }
 }
 
-impl EguiScale for SnarlStyle {
+impl EguiScale for TreeizeStyle {
   fn scale(&mut self, scale: f32) {
     self.node_frame.scale(scale);
     self.header_frame.scale(scale);

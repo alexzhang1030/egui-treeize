@@ -1,13 +1,13 @@
 use egui::{Painter, Pos2, Rect, Style, Ui, emath::TSTransform};
 
-use crate::{InPin, InPinId, NodeId, OutPin, OutPinId, Snarl};
+use crate::{InPin, InPinId, NodeId, OutPin, OutPinId, Treeize};
 
 use super::{
-  BackgroundPattern, NodeLayout, SnarlStyle,
+  BackgroundPattern, NodeLayout, TreeizeStyle,
   pin::{AnyPins, SnarlPin},
 };
 
-/// `SnarlViewer` is a trait for viewing a Snarl.
+/// `SnarlViewer` is a trait for viewing a Treeize.
 ///
 /// It can extract necessary data from the nodes and controls their
 /// response to certain events.
@@ -20,7 +20,7 @@ pub trait SnarlViewer<T> {
   /// Except for pins if they are configured to be rendered outside of the frame.
   ///
   /// Returns `default` by default.
-  /// `default` frame is taken from the [`SnarlStyle::node_frame`] or constructed if it's `None`.
+  /// `default` frame is taken from the [`TreeizeStyle::node_frame`] or constructed if it's `None`.
   ///
   /// Override this method to customize the frame for specific nodes.
   fn node_frame(
@@ -29,9 +29,9 @@ pub trait SnarlViewer<T> {
     node: NodeId,
     inputs: &[InPin],
     outputs: &[OutPin],
-    snarl: &Snarl<T>,
+    treeize: &Treeize<T>,
   ) -> egui::Frame {
-    let _ = (node, inputs, outputs, snarl);
+    let _ = (node, inputs, outputs, treeize);
     default
   }
 
@@ -41,8 +41,8 @@ pub trait SnarlViewer<T> {
   /// And header UI (see [`show_header`]) will be placed inside this frame.
   ///
   /// Returns `default` by default.
-  /// `default` frame is taken from the [`SnarlStyle::header_frame`],
-  /// or [`SnarlStyle::node_frame`] with removed shadow if `None`,
+  /// `default` frame is taken from the [`TreeizeStyle::header_frame`],
+  /// or [`TreeizeStyle::node_frame`] with removed shadow if `None`,
   /// or constructed if both are `None`.
   fn header_frame(
     &mut self,
@@ -50,9 +50,9 @@ pub trait SnarlViewer<T> {
     node: NodeId,
     inputs: &[InPin],
     outputs: &[OutPin],
-    snarl: &Snarl<T>,
+    treeize: &Treeize<T>,
   ) -> egui::Frame {
-    let _ = (node, inputs, outputs, snarl);
+    let _ = (node, inputs, outputs, treeize);
     default
   }
   /// Checks if node has a custom egui style.
@@ -62,9 +62,9 @@ pub trait SnarlViewer<T> {
     node: NodeId,
     inputs: &[InPin],
     outputs: &[OutPin],
-    snarl: &Snarl<T>,
+    treeize: &Treeize<T>,
   ) -> bool {
-    let _ = (node, inputs, outputs, snarl);
+    let _ = (node, inputs, outputs, treeize);
     false
   }
 
@@ -75,9 +75,9 @@ pub trait SnarlViewer<T> {
     node: NodeId,
     inputs: &[InPin],
     outputs: &[OutPin],
-    snarl: &Snarl<T>,
+    treeize: &Treeize<T>,
   ) {
-    let _ = (style, node, inputs, outputs, snarl);
+    let _ = (style, node, inputs, outputs, treeize);
   }
 
   /// Returns elements layout for the node.
@@ -86,7 +86,7 @@ pub trait SnarlViewer<T> {
   /// See [`NodeLayout`] for available placements.
   ///
   /// Returns `default` by default.
-  /// `default` layout is taken from the [`SnarlStyle::node_layout`] or constructed if it's `None`.
+  /// `default` layout is taken from the [`TreeizeStyle::node_layout`] or constructed if it's `None`.
   /// Override this method to customize the layout for specific nodes.
   #[inline]
   fn node_layout(
@@ -95,9 +95,9 @@ pub trait SnarlViewer<T> {
     node: NodeId,
     inputs: &[InPin],
     outputs: &[OutPin],
-    snarl: &Snarl<T>,
+    treeize: &Treeize<T>,
   ) -> NodeLayout {
-    let _ = (node, inputs, outputs, snarl);
+    let _ = (node, inputs, outputs, treeize);
     default
   }
 
@@ -113,10 +113,10 @@ pub trait SnarlViewer<T> {
     inputs: &[InPin],
     outputs: &[OutPin],
     ui: &mut Ui,
-    snarl: &mut Snarl<T>,
+    treeize: &mut Treeize<T>,
   ) {
     let _ = (inputs, outputs);
-    ui.label(self.title(&snarl[node]));
+    ui.label(self.title(&treeize[node]));
   }
 
   /// Returns number of input pins of the node.
@@ -129,7 +129,7 @@ pub trait SnarlViewer<T> {
     &mut self,
     pin: &InPin,
     ui: &mut Ui,
-    snarl: &mut Snarl<T>,
+    treeize: &mut Treeize<T>,
   ) -> impl SnarlPin + 'static;
 
   /// Returns number of output pins of the node.
@@ -142,7 +142,7 @@ pub trait SnarlViewer<T> {
     &mut self,
     pin: &OutPin,
     ui: &mut Ui,
-    snarl: &mut Snarl<T>,
+    treeize: &mut Treeize<T>,
   ) -> impl SnarlPin + 'static;
 
   /// Checks if node has something to show in body - between input and output pins.
@@ -160,9 +160,9 @@ pub trait SnarlViewer<T> {
     inputs: &[InPin],
     outputs: &[OutPin],
     ui: &mut Ui,
-    snarl: &mut Snarl<T>,
+    treeize: &mut Treeize<T>,
   ) {
-    let _ = (node, inputs, outputs, ui, snarl);
+    let _ = (node, inputs, outputs, ui, treeize);
   }
 
   /// Checks if node has something to show in footer - below pins and body.
@@ -180,9 +180,9 @@ pub trait SnarlViewer<T> {
     inputs: &[InPin],
     outputs: &[OutPin],
     ui: &mut Ui,
-    snarl: &mut Snarl<T>,
+    treeize: &mut Treeize<T>,
   ) {
-    let _ = (node, inputs, outputs, ui, snarl);
+    let _ = (node, inputs, outputs, ui, treeize);
   }
 
   /// Reports the final node's rect after rendering.
@@ -190,8 +190,8 @@ pub trait SnarlViewer<T> {
   /// It aimed to be used for custom positioning of nodes that requires node dimensions for calculations.
   /// Node's position can be modified directly in this method.
   #[inline]
-  fn final_node_rect(&mut self, node: NodeId, rect: Rect, ui: &mut Ui, snarl: &mut Snarl<T>) {
-    let _ = (node, rect, ui, snarl);
+  fn final_node_rect(&mut self, node: NodeId, rect: Rect, ui: &mut Ui, treeize: &mut Treeize<T>) {
+    let _ = (node, rect, ui, treeize);
   }
 
   /// Checks if node has something to show in on-hover popup.
@@ -209,49 +209,49 @@ pub trait SnarlViewer<T> {
     inputs: &[InPin],
     outputs: &[OutPin],
     ui: &mut Ui,
-    snarl: &mut Snarl<T>,
+    treeize: &mut Treeize<T>,
   ) {
-    let _ = (node, inputs, outputs, ui, snarl);
+    let _ = (node, inputs, outputs, ui, treeize);
   }
 
   /// Checks if wire has something to show in widget.
   /// This may not be called if wire is invisible.
   #[inline]
-  fn has_wire_widget(&mut self, from: &OutPinId, to: &InPinId, snarl: &Snarl<T>) -> bool {
-    let _ = (from, to, snarl);
+  fn has_wire_widget(&mut self, from: &OutPinId, to: &InPinId, treeize: &Treeize<T>) -> bool {
+    let _ = (from, to, treeize);
     false
   }
 
   /// Renders the wire's widget.
   /// This may not be called if wire is invisible.
   #[inline]
-  fn show_wire_widget(&mut self, from: &OutPin, to: &InPin, ui: &mut Ui, snarl: &mut Snarl<T>) {
-    let _ = (from, to, ui, snarl);
+  fn show_wire_widget(&mut self, from: &OutPin, to: &InPin, ui: &mut Ui, treeize: &mut Treeize<T>) {
+    let _ = (from, to, ui, treeize);
   }
 
-  /// Checks if the snarl has something to show in context menu if right-clicked or long-touched on empty space at `pos`.
+  /// Checks if the treeize has something to show in context menu if right-clicked or long-touched on empty space at `pos`.
   #[inline]
-  fn has_graph_menu(&mut self, pos: Pos2, snarl: &mut Snarl<T>) -> bool {
-    let _ = (pos, snarl);
+  fn has_graph_menu(&mut self, pos: Pos2, treeize: &mut Treeize<T>) -> bool {
+    let _ = (pos, treeize);
     false
   }
 
-  /// Show context menu for the snarl.
+  /// Show context menu for the treeize.
   ///
   /// This can be used to implement menu for adding new nodes.
   #[inline]
-  fn show_graph_menu(&mut self, pos: Pos2, ui: &mut Ui, snarl: &mut Snarl<T>) {
-    let _ = (pos, ui, snarl);
+  fn show_graph_menu(&mut self, pos: Pos2, ui: &mut Ui, treeize: &mut Treeize<T>) {
+    let _ = (pos, ui, treeize);
   }
 
-  /// Checks if the snarl has something to show in context menu if wire drag is stopped at `pos`.
+  /// Checks if the treeize has something to show in context menu if wire drag is stopped at `pos`.
   #[inline]
-  fn has_dropped_wire_menu(&mut self, src_pins: AnyPins, snarl: &mut Snarl<T>) -> bool {
-    let _ = (src_pins, snarl);
+  fn has_dropped_wire_menu(&mut self, src_pins: AnyPins, treeize: &mut Treeize<T>) -> bool {
+    let _ = (src_pins, treeize);
     false
   }
 
-  /// Show context menu for the snarl. This menu is opened when releasing a pin to empty
+  /// Show context menu for the treeize. This menu is opened when releasing a pin to empty
   /// space. It can be used to implement menu for adding new node, and directly
   /// connecting it to the released wire.
   #[inline]
@@ -260,9 +260,9 @@ pub trait SnarlViewer<T> {
     pos: Pos2,
     ui: &mut Ui,
     src_pins: AnyPins,
-    snarl: &mut Snarl<T>,
+    treeize: &mut Treeize<T>,
   ) {
-    let _ = (pos, ui, src_pins, snarl);
+    let _ = (pos, ui, src_pins, treeize);
   }
 
   /// Checks if the node has something to show in context menu if right-clicked or long-touched on the node.
@@ -272,7 +272,7 @@ pub trait SnarlViewer<T> {
     false
   }
 
-  /// Show context menu for the snarl.
+  /// Show context menu for the treeize.
   ///
   /// This can be used to implement menu for adding new nodes.
   #[inline]
@@ -282,9 +282,9 @@ pub trait SnarlViewer<T> {
     inputs: &[InPin],
     outputs: &[OutPin],
     ui: &mut Ui,
-    snarl: &mut Snarl<T>,
+    treeize: &mut Treeize<T>,
   ) {
-    let _ = (node, inputs, outputs, ui, snarl);
+    let _ = (node, inputs, outputs, ui, treeize);
   }
 
   /// Asks the viewer to connect two pins.
@@ -292,14 +292,14 @@ pub trait SnarlViewer<T> {
   /// This is usually happens when user drags a wire from one node's output pin to another node's input pin or vice versa.
   /// By default this method connects the pins and returns `Ok(())`.
   #[inline]
-  fn connect(&mut self, from: &OutPin, to: &InPin, snarl: &mut Snarl<T>) {
-    snarl.connect(from.id, to.id);
+  fn connect(&mut self, from: &OutPin, to: &InPin, treeize: &mut Treeize<T>) {
+    treeize.connect(from.id, to.id);
   }
 
   /// Asks the viewer to disconnect two pins.
   #[inline]
-  fn disconnect(&mut self, from: &OutPin, to: &InPin, snarl: &mut Snarl<T>) {
-    snarl.disconnect(from.id, to.id);
+  fn disconnect(&mut self, from: &OutPin, to: &InPin, treeize: &mut Treeize<T>) {
+    treeize.disconnect(from.id, to.id);
   }
 
   /// Asks the viewer to disconnect all wires from the output pin.
@@ -307,8 +307,8 @@ pub trait SnarlViewer<T> {
   /// This is usually happens when right-clicking on an output pin.
   /// By default this method disconnects the pins and returns `Ok(())`.
   #[inline]
-  fn drop_outputs(&mut self, pin: &OutPin, snarl: &mut Snarl<T>) {
-    snarl.drop_outputs(pin.id);
+  fn drop_outputs(&mut self, pin: &OutPin, treeize: &mut Treeize<T>) {
+    treeize.drop_outputs(pin.id);
   }
 
   /// Asks the viewer to disconnect all wires from the input pin.
@@ -316,11 +316,11 @@ pub trait SnarlViewer<T> {
   /// This is usually happens when right-clicking on an input pin.
   /// By default this method disconnects the pins and returns `Ok(())`.
   #[inline]
-  fn drop_inputs(&mut self, pin: &InPin, snarl: &mut Snarl<T>) {
-    snarl.drop_inputs(pin.id);
+  fn drop_inputs(&mut self, pin: &InPin, treeize: &mut Treeize<T>) {
+    treeize.drop_inputs(pin.id);
   }
 
-  /// Draws background of the snarl view.
+  /// Draws background of the treeize view.
   ///
   /// By default it draws the background pattern using [`BackgroundPattern::draw`].
   ///
@@ -330,26 +330,26 @@ pub trait SnarlViewer<T> {
     &mut self,
     background: Option<&BackgroundPattern>,
     viewport: &Rect,
-    snarl_style: &SnarlStyle,
+    snarl_style: &TreeizeStyle,
     style: &Style,
     painter: &Painter,
-    snarl: &Snarl<T>,
+    treeize: &Treeize<T>,
   ) {
-    let _ = snarl;
+    let _ = treeize;
 
     if let Some(background) = background {
       background.draw(viewport, snarl_style, style, painter);
     }
   }
 
-  /// Informs the viewer what is the current transform of the snarl view
+  /// Informs the viewer what is the current transform of the treeize view
   /// and allows viewer to override it.
   ///
   /// This method is called in the beginning of the graph rendering.
   ///
   /// By default it does nothing.
   #[inline]
-  fn current_transform(&mut self, to_global: &mut TSTransform, snarl: &mut Snarl<T>) {
-    let _ = (to_global, snarl);
+  fn current_transform(&mut self, to_global: &mut TSTransform, treeize: &mut Treeize<T>) {
+    let _ = (to_global, treeize);
   }
 }
