@@ -154,6 +154,12 @@ impl Wires {
     count - self.wires.len()
   }
 
+  fn drop_all_nodes(&mut self) -> usize {
+    let count = self.wires.len();
+    self.wires.clear();
+    count
+  }
+
   fn drop_inputs(&mut self, pin: InPinId) -> usize {
     let count = self.wires.len();
     self.wires.retain(|wire| wire.in_pin != pin);
@@ -267,6 +273,24 @@ impl<T> Treeize<T> {
     let value = self.nodes.remove(idx.0).value;
     self.wires.drop_node(idx);
     value
+  }
+
+  /// Removes all nodes from the Treeize.
+  /// Returns number of removed nodes.
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// # use egui_treeize::Treeize;
+  /// let mut treeize = Treeize::<()>::new();
+  /// treeize.clear();
+  /// ```
+  #[track_caller]
+  pub fn clear(&mut self) -> usize {
+    let count = self.nodes.len();
+    self.nodes.drain();
+    self.wires.drop_all_nodes();
+    count
   }
 
   /// Connects two nodes.

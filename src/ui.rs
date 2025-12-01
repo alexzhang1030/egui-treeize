@@ -1456,8 +1456,6 @@ fn draw_body<T, V>(
   treeize: &mut Treeize<T>,
   viewer: &mut V,
   node: NodeId,
-  inputs: &[InPin],
-  outputs: &[OutPin],
   ui: &mut Ui,
   body_rect: Rect,
   payload_clip_rect: Rect,
@@ -1475,7 +1473,7 @@ where
 
   body_ui.shrink_clip_rect(payload_clip_rect);
 
-  viewer.show_body(node, inputs, outputs, &mut body_ui, treeize);
+  viewer.show_body(node, &mut body_ui, treeize);
 
   let final_rect = body_ui.min_rect();
   ui.expand_to_include_rect(final_rect.intersect(payload_clip_rect));
@@ -1771,17 +1769,7 @@ where
             pos2(outputs_rect.left() - ui.spacing().item_spacing.x, payload_rect.bottom()),
           );
 
-          let r = draw_body(
-            treeize,
-            viewer,
-            node,
-            &inputs,
-            &outputs,
-            ui,
-            body_rect,
-            payload_clip_rect,
-            treeize_state,
-          );
+          let r = draw_body(treeize, viewer, node, ui, body_rect, payload_clip_rect, treeize_state);
 
           new_pins_size.x += r.final_rect.width() + ui.spacing().item_spacing.x;
           new_pins_size.y = f32::max(new_pins_size.y, r.final_rect.height());
@@ -1812,7 +1800,7 @@ where
       );
       footer_ui.shrink_clip_rect(payload_clip_rect);
 
-      viewer.show_footer(node, &inputs, &outputs, &mut footer_ui, treeize);
+      viewer.show_footer(node, &mut footer_ui, treeize);
 
       let final_rect = footer_ui.min_rect();
       ui.expand_to_include_rect(final_rect.intersect(payload_clip_rect));
@@ -1857,7 +1845,7 @@ where
 
         ui.allocate_exact_size(header_drag_space, Sense::hover());
 
-        viewer.show_header(node, &inputs, &outputs, ui, treeize);
+        viewer.show_header(node, ui, treeize);
 
         header_rect = ui.min_rect();
       });

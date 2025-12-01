@@ -107,15 +107,8 @@ pub trait TreeizeViewer<T> {
   ///
   /// By default it shows the node's title.
   #[inline]
-  fn show_header(
-    &mut self,
-    node: NodeId,
-    inputs: &[InPin],
-    outputs: &[OutPin],
-    ui: &mut Ui,
-    treeize: &mut Treeize<T>,
-  ) {
-    let _ = (inputs, outputs);
+  fn show_header(&mut self, node: NodeId, ui: &mut Ui, treeize: &mut Treeize<T>) {
+    let _ = node;
     ui.label(self.title(&treeize[node]));
   }
 
@@ -154,15 +147,8 @@ pub trait TreeizeViewer<T> {
 
   /// Renders the node's body.
   #[inline]
-  fn show_body(
-    &mut self,
-    node: NodeId,
-    inputs: &[InPin],
-    outputs: &[OutPin],
-    ui: &mut Ui,
-    treeize: &mut Treeize<T>,
-  ) {
-    let _ = (node, inputs, outputs, ui, treeize);
+  fn show_body(&mut self, node: NodeId, ui: &mut Ui, treeize: &mut Treeize<T>) {
+    let _ = (node, ui, treeize);
   }
 
   /// Checks if node has something to show in footer - below pins and body.
@@ -174,15 +160,8 @@ pub trait TreeizeViewer<T> {
 
   /// Renders the node's footer.
   #[inline]
-  fn show_footer(
-    &mut self,
-    node: NodeId,
-    inputs: &[InPin],
-    outputs: &[OutPin],
-    ui: &mut Ui,
-    treeize: &mut Treeize<T>,
-  ) {
-    let _ = (node, inputs, outputs, ui, treeize);
+  fn show_footer(&mut self, node: NodeId, ui: &mut Ui, treeize: &mut Treeize<T>) {
+    let _ = (node, ui, treeize);
   }
 
   /// Reports the final node's rect after rendering.
