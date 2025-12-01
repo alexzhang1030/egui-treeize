@@ -7,8 +7,8 @@ use egui::{Color32, Id, Ui};
 use egui_treeize::{
   InPin, InPinId, NodeId, OutPin, OutPinId, Treeize,
   ui::{
-    AnyPins, NodeLayout, PinInfo, PinPlacement, SnarlViewer, SnarlWidget, TreeizeStyle, WireStyle,
-    get_selected_nodes,
+    AnyPins, NodeLayout, PinInfo, PinPlacement, TreeizeStyle, TreeizeViewer, TreeizeWidget,
+    WireStyle, get_selected_nodes,
   },
 };
 
@@ -97,7 +97,7 @@ impl DemoNode {
 
 struct DemoViewer;
 
-impl SnarlViewer<DemoNode> for DemoViewer {
+impl TreeizeViewer<DemoNode> for DemoViewer {
   #[inline]
   fn connect(&mut self, from: &OutPin, to: &InPin, treeize: &mut Treeize<DemoNode>) {
     // Validate connection
@@ -988,7 +988,7 @@ impl App for DemoApp {
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {
-      SnarlWidget::new().id(Id::new("snarl-demo")).style(self.style).show(
+      TreeizeWidget::new().id(Id::new("snarl-demo")).style(self.style).show(
         &mut self.treeize,
         &mut DemoViewer,
         ui,

@@ -4,14 +4,14 @@ use crate::{InPin, InPinId, NodeId, OutPin, OutPinId, Treeize};
 
 use super::{
   BackgroundPattern, NodeLayout, TreeizeStyle,
-  pin::{AnyPins, SnarlPin},
+  pin::{AnyPins, TreeizePin},
 };
 
-/// `SnarlViewer` is a trait for viewing a Treeize.
+/// `TreeizeViewer` is a trait for viewing a Treeize.
 ///
 /// It can extract necessary data from the nodes and controls their
 /// response to certain events.
-pub trait SnarlViewer<T> {
+pub trait TreeizeViewer<T> {
   /// Returns title of the node.
   fn title(&mut self, node: &T) -> String;
 
@@ -121,7 +121,7 @@ pub trait SnarlViewer<T> {
 
   /// Returns number of input pins of the node.
   ///
-  /// [`SnarlViewer::show_input`] will be called for each input in range `0..inputs()`.
+  /// [`TreeizeViewer::show_input`] will be called for each input in range `0..inputs()`.
   fn inputs(&mut self, node: &T) -> usize;
 
   /// Renders one specified node's input element and returns drawer for the corresponding pin.
@@ -130,11 +130,11 @@ pub trait SnarlViewer<T> {
     pin: &InPin,
     ui: &mut Ui,
     treeize: &mut Treeize<T>,
-  ) -> impl SnarlPin + 'static;
+  ) -> impl TreeizePin + 'static;
 
   /// Returns number of output pins of the node.
   ///
-  /// [`SnarlViewer::show_output`] will be called for each output in range `0..outputs()`.
+  /// [`TreeizeViewer::show_output`] will be called for each output in range `0..outputs()`.
   fn outputs(&mut self, node: &T) -> usize;
 
   /// Renders the node's output.
@@ -143,7 +143,7 @@ pub trait SnarlViewer<T> {
     pin: &OutPin,
     ui: &mut Ui,
     treeize: &mut Treeize<T>,
-  ) -> impl SnarlPin + 'static;
+  ) -> impl TreeizePin + 'static;
 
   /// Checks if node has something to show in body - between input and output pins.
   #[inline]

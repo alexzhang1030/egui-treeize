@@ -31,7 +31,7 @@ pub enum Effect<T> {
 }
 
 /// Contained for deferred execution of effects.
-/// It is populated by [`SnarlViewer`] methods and then applied to the Treeize.
+/// It is populated by [`TreeizeViewer`] methods and then applied to the Treeize.
 pub struct Effects<T> {
   effects: Vec<Effect<T>>,
 }

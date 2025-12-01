@@ -26,15 +26,15 @@ mod wire;
 
 use self::{
   pin::AnyPin,
-  state::{NewWires, NodeState, RowHeights, SnarlState},
+  state::{NewWires, NodeState, RowHeights, TreeizeState},
   wire::{draw_wire, hit_wire, pick_wire_style},
 };
 
 pub use self::{
   background_pattern::{BackgroundPattern, Grid},
-  pin::{AnyPins, PinInfo, PinShape, PinWireInfo, SnarlPin},
+  pin::{AnyPins, PinInfo, PinShape, PinWireInfo, TreeizePin},
   state::get_selected_nodes,
-  viewer::SnarlViewer,
+  viewer::TreeizeViewer,
   wire::{WireLayer, WireStyle},
 };
 
@@ -597,7 +597,7 @@ struct PinResponse {
 
 /// Widget to display [`Treeize`] graph in [`Ui`].
 #[derive(Clone, Copy, Debug)]
-pub struct SnarlWidget {
+pub struct TreeizeWidget {
   id_salt: Id,
   id: Option<Id>,
   style: TreeizeStyle,
@@ -605,19 +605,19 @@ pub struct SnarlWidget {
   max_size: Vec2,
 }
 
-impl Default for SnarlWidget {
+impl Default for TreeizeWidget {
   #[inline]
   fn default() -> Self {
     Self::new()
   }
 }
 
-impl SnarlWidget {
-  /// Returns new [`SnarlWidget`] with default parameters.
+impl TreeizeWidget {
+  /// Returns new [`TreeizeWidget`] with default parameters.
   #[inline]
   #[must_use]
   pub fn new() -> Self {
-    SnarlWidget {
+    TreeizeWidget {
       id_salt: Id::new(":treeize:"),
       id: None,
       style: TreeizeStyle::new(),
@@ -631,7 +631,7 @@ impl SnarlWidget {
   /// Use this if you want to persist the state of the widget
   /// when it changes position in the widget hierarchy.
   ///
-  /// Prefer using [`SnarlWidget::id_salt`] otherwise.
+  /// Prefer using [`TreeizeWidget::id_salt`] otherwise.
   #[inline]
   #[must_use]
   pub const fn id(mut self, id: Id) -> Self {
@@ -643,7 +643,7 @@ impl SnarlWidget {
   ///
   /// It must be locally unique for the current [`Ui`] hierarchy position.
   ///
-  /// Ignored if [`SnarlWidget::id`] was set.
+  /// Ignored if [`TreeizeWidget::id`] was set.
   #[inline]
   #[must_use]
   pub fn id_salt(mut self, id_salt: impl Hash) -> Self {
@@ -684,7 +684,7 @@ impl SnarlWidget {
   #[inline]
   pub fn show<T, V>(&self, treeize: &mut Treeize<T>, viewer: &mut V, ui: &mut Ui) -> egui::Response
   where
-    V: SnarlViewer<T>,
+    V: TreeizeViewer<T>,
   {
     let snarl_id = self.get_id(ui.id());
 
@@ -703,7 +703,7 @@ fn show_snarl<T, V>(
   ui: &mut Ui,
 ) -> egui::Response
 where
-  V: SnarlViewer<T>,
+  V: TreeizeViewer<T>,
 {
   #![allow(clippy::too_many_lines)]
 
@@ -733,7 +733,7 @@ where
   let ui_rect = content_rect;
 
   let mut snarl_state =
-    SnarlState::load(ui.ctx(), snarl_id, treeize, ui_rect, min_scale, max_scale);
+    TreeizeState::load(ui.ctx(), snarl_id, treeize, ui_rect, min_scale, max_scale);
   let mut to_global = snarl_state.to_global();
 
   let clip_rect = ui.clip_rect();
@@ -1174,13 +1174,13 @@ fn draw_inputs<T, V>(
   min_pin_y_top: f32,
   min_pin_y_bottom: f32,
   input_spacing: Option<f32>,
-  snarl_state: &mut SnarlState,
+  snarl_state: &mut TreeizeState,
   modifiers: Modifiers,
   input_positions: &mut HashMap<InPinId, PinResponse>,
   heights: Heights,
 ) -> DrawPinsResponse
 where
-  V: SnarlViewer<T>,
+  V: TreeizeViewer<T>,
 {
   let mut drag_released = false;
   let mut pin_hovered = None;
@@ -1320,13 +1320,13 @@ fn draw_outputs<T, V>(
   min_pin_y_top: f32,
   min_pin_y_bottom: f32,
   output_spacing: Option<f32>,
-  snarl_state: &mut SnarlState,
+  snarl_state: &mut TreeizeState,
   modifiers: Modifiers,
   output_positions: &mut HashMap<OutPinId, PinResponse>,
   heights: Heights,
 ) -> DrawPinsResponse
 where
-  V: SnarlViewer<T>,
+  V: TreeizeViewer<T>,
 {
   let mut drag_released = false;
   let mut pin_hovered = None;
@@ -1460,10 +1460,10 @@ fn draw_body<T, V>(
   ui: &mut Ui,
   body_rect: Rect,
   payload_clip_rect: Rect,
-  _snarl_state: &SnarlState,
+  _snarl_state: &TreeizeState,
 ) -> DrawBodyResponse
 where
-  V: SnarlViewer<T>,
+  V: TreeizeViewer<T>,
 {
   let mut body_ui = ui.new_child(
     UiBuilder::new()
@@ -1493,7 +1493,7 @@ fn draw_node<T, V>(
   ui: &mut Ui,
   node: NodeId,
   viewer: &mut V,
-  snarl_state: &mut SnarlState,
+  snarl_state: &mut TreeizeState,
   style: &TreeizeStyle,
   snarl_id: Id,
   input_positions: &mut HashMap<InPinId, PinResponse>,
@@ -1501,7 +1501,7 @@ fn draw_node<T, V>(
   output_positions: &mut HashMap<OutPinId, PinResponse>,
 ) -> Option<DrawNodeResponse>
 where
-  V: SnarlViewer<T>,
+  V: TreeizeViewer<T>,
 {
   let Node { pos, open, ref value } = treeize.nodes[node.0];
 
@@ -1917,7 +1917,7 @@ impl<T> Treeize<T> {
   #[inline]
   pub fn show<V>(&mut self, viewer: &mut V, style: &TreeizeStyle, id_salt: impl Hash, ui: &mut Ui)
   where
-    V: SnarlViewer<T>,
+    V: TreeizeViewer<T>,
   {
     show_snarl(
       ui.make_persistent_id(id_salt),

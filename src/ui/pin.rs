@@ -34,7 +34,7 @@ pub struct PinWireInfo {
 }
 
 /// Uses `Painter` to draw a pin.
-pub trait SnarlPin {
+pub trait TreeizePin {
   /// Calculates pin Rect from the given parameters.
   fn pin_rect(&self, x: f32, y0: f32, y1: f32, size: f32) -> Rect {
     // Center vertically by default.
@@ -79,7 +79,7 @@ pub enum PinShape {
   Star,
 }
 
-/// Information about a pin returned by `SnarlViewer::show_input` and `SnarlViewer::show_output`.
+/// Information about a pin returned by `TreeizeViewer::show_input` and `TreeizeViewer::show_output`.
 ///
 /// All fields are optional.
 /// If a field is `None`, the default value is used derived from the graph style.
@@ -206,7 +206,7 @@ impl PinInfo {
   }
 }
 
-impl SnarlPin for PinInfo {
+impl TreeizePin for PinInfo {
   fn draw(
     self,
     snarl_style: &TreeizeStyle,

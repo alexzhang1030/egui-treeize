@@ -8,7 +8,7 @@ use smallvec::{SmallVec, ToSmallVec, smallvec};
 
 use crate::{InPinId, NodeId, OutPinId, Treeize};
 
-use super::{SnarlWidget, transform_matching_points};
+use super::{TreeizeWidget, transform_matching_points};
 
 pub type RowHeights = SmallVec<[f32; 8]>;
 
@@ -153,7 +153,7 @@ struct RectSelect {
   current: Pos2,
 }
 
-pub struct SnarlState {
+pub struct TreeizeState {
   /// Treeize viewport transform to global space.
   to_global: TSTransform,
 
@@ -217,14 +217,14 @@ impl SelectedNodes {
 }
 
 #[derive(Clone)]
-struct SnarlStateData {
+struct TreeizeStateData {
   to_global: TSTransform,
   new_wires: Option<NewWires>,
   new_wires_menu: bool,
   rect_selection: Option<RectSelect>,
 }
 
-impl SnarlStateData {
+impl TreeizeStateData {
   fn save(self, cx: &Context, id: Id) {
     cx.data_mut(|d| {
       d.insert_temp(id, self);
@@ -245,7 +245,7 @@ fn prune_selected_nodes<T>(
   old_size != selected_nodes.len()
 }
 
-impl SnarlState {
+impl TreeizeState {
   pub fn load<T>(
     cx: &Context,
     id: Id,
@@ -254,7 +254,7 @@ impl SnarlState {
     min_scale: f32,
     max_scale: f32,
   ) -> Self {
-    let Some(data) = SnarlStateData::load(cx, id) else {
+    let Some(data) = TreeizeStateData::load(cx, id) else {
       cx.request_discard("Initial placing");
       return Self::initial(id, treeize, ui_rect, min_scale, max_scale);
     };
@@ -264,7 +264,7 @@ impl SnarlState {
 
     let draw_order = DrawOrder::load(cx, id).0;
 
-    SnarlState {
+    TreeizeState {
       to_global: data.to_global,
       new_wires: data.new_wires,
       new_wires_menu: data.new_wires_menu,
@@ -302,7 +302,7 @@ impl SnarlState {
 
     let to_global = transform_matching_points(bb.center(), ui_rect.center(), scaling);
 
-    SnarlState {
+    TreeizeState {
       to_global,
       new_wires: None,
       new_wires_menu: false,
@@ -319,7 +319,7 @@ impl SnarlState {
     self.dirty |= prune_selected_nodes(&mut self.selected_nodes, treeize);
 
     if self.dirty {
-      let data = SnarlStateData {
+      let data = TreeizeStateData {
         to_global: self.to_global,
         new_wires: self.new_wires,
         new_wires_menu: self.new_wires_menu,
@@ -579,19 +579,19 @@ impl SnarlState {
   }
 }
 
-impl SnarlWidget {
-  /// Returns list of nodes selected in the UI for the `SnarlWidget` with same id.
+impl TreeizeWidget {
+  /// Returns list of nodes selected in the UI for the `TreeizeWidget` with same id.
   ///
-  /// Use same `Ui` instance that was used in [`SnarlWidget::show`].
+  /// Use same `Ui` instance that was used in [`TreeizeWidget::show`].
   #[must_use]
   #[inline]
   pub fn get_selected_nodes(self, ui: &Ui) -> Vec<NodeId> {
     self.get_selected_nodes_at(ui.id(), ui.ctx())
   }
 
-  /// Returns list of nodes selected in the UI for the `SnarlWidget` with same id.
+  /// Returns list of nodes selected in the UI for the `TreeizeWidget` with same id.
   ///
-  /// `ui_id` must be the Id of the `Ui` instance that was used in [`SnarlWidget::show`].
+  /// `ui_id` must be the Id of the `Ui` instance that was used in [`TreeizeWidget::show`].
   #[must_use]
   #[inline]
   pub fn get_selected_nodes_at(self, ui_id: Id, ctx: &Context) -> Vec<NodeId> {
@@ -601,10 +601,10 @@ impl SnarlWidget {
   }
 }
 
-/// Returns nodes selected in the UI for the `SnarlWidget` with same ID.
+/// Returns nodes selected in the UI for the `TreeizeWidget` with same ID.
 ///
-/// Only works if [`SnarlWidget::id`] was used.
-/// For other cases construct [`SnarlWidget`] and use [`SnarlWidget::get_selected_nodes`] or [`SnarlWidget::get_selected_nodes_at`].
+/// Only works if [`TreeizeWidget::id`] was used.
+/// For other cases construct [`TreeizeWidget`] and use [`TreeizeWidget::get_selected_nodes`] or [`TreeizeWidget::get_selected_nodes_at`].
 #[must_use]
 #[inline]
 pub fn get_selected_nodes(id: Id, ctx: &Context) -> Vec<NodeId> {
