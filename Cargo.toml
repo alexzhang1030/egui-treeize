@@ -23,7 +23,7 @@ wasm-bindgen-futures = "0.4"
 web-sys              = "0.3.81"
 
 [package]
-categories              = ["gui", "visualization", "tree", "graph"]
+categories              = ["gui", "visualization"]
 description             = "Tree-like graph visualization for egui"
 documentation.workspace = true
 edition.workspace       = true
@@ -33,7 +33,7 @@ name                    = "egui-treeize"
 readme                  = "README.md"
 repository.workspace    = true
 rust-version.workspace  = true
-version                 = "0.1.0"
+version                 = "0.0.1"
 
 [features]
 serde = ["dep:serde", "egui/serde", "slab/serde"]
