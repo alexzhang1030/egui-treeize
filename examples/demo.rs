@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use eframe::{App, CreationContext};
 use egui::{Color32, Id, Ui};
-use egui_snarl::{
+use egui_treeize::{
   InPin, InPinId, NodeId, OutPin, OutPinId, Snarl,
   ui::{
     AnyPins, NodeLayout, PinInfo, PinPlacement, SnarlStyle, SnarlViewer, SnarlWidget, WireStyle,

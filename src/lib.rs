@@ -1,8 +1,7 @@
 //!
-//! # egui-snarl
+//! # egui-treeize
 //!
-//! Provides a node-graph container for egui.
-//!
+//! Provides a tree-like graph visualization for egui.
 //!
 
 #![deny(missing_docs, non_ascii_idents, unsafe_code)]

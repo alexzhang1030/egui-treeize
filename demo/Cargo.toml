@@ -1,24 +1,24 @@
 [package]
-name = "demo"
-version = "0.1.0"
 edition.workspace = true
-publish = false
+name              = "demo"
+publish           = false
+version           = "0.1.0"
 
 [[bin]]
 name = "demo"
 path = "../examples/demo.rs"
 
 [dependencies]
-egui.workspace = true
-egui-probe = { workspace = true, features = ["derive"] }
-eframe = { workspace = true, features = ["serde", "persistence"] }
-egui_extras = { workspace = true, features = ["all_loaders"] }
-syn = { workspace = true, features = ["extra-traits"] }
-serde = { workspace = true, features = ["derive"] }
+eframe               = { workspace = true, features = ["serde", "persistence"] }
+egui.workspace       = true
+egui-probe           = { workspace = true, features = ["derive"] }
+egui_extras          = { workspace = true, features = ["all_loaders"] }
+serde                = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+syn                  = { workspace = true, features = ["extra-traits"] }
 
-egui-snarl = { path = "..", features = ["egui-probe", "serde"] }
+egui-treeize = { path = "..", features = ["egui-probe", "serde"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures.workspace = true
-web-sys.workspace = true
+web-sys.workspace              = true
