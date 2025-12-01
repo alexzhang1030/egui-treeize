@@ -882,7 +882,7 @@ pub struct DemoApp {
 
 const fn default_style() -> TreeizeStyle {
   TreeizeStyle {
-    node_layout: Some(NodeLayout::coil()),
+    node_layout: Some(NodeLayout::compact()),
     pin_placement: Some(PinPlacement::Edge),
     pin_size: Some(7.0),
     node_frame: Some(egui::Frame {
@@ -996,6 +996,7 @@ impl App for DemoApp {
         &mut self.treeize,
         &mut DemoViewer,
         ui,
+        None,
       );
     });
   }

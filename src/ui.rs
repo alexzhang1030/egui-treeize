@@ -305,10 +305,6 @@ pub struct TreeizeStyle {
   #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none", default))]
   pub max_scale: Option<f32>,
 
-  /// Enable centering by double click on background
-  #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none", default))]
-  pub centering: Option<bool>,
-
   /// Stroke for selection.
   #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none", default))]
   pub select_stoke: Option<Stroke>,
@@ -434,10 +430,6 @@ impl TreeizeStyle {
     self.header_frame.unwrap_or_else(|| self.get_node_frame(style).shadow(Shadow::NONE))
   }
 
-  fn get_centering(&self) -> bool {
-    self.centering.unwrap_or(true)
-  }
-
   fn get_select_stroke(&self, style: &Style) -> Stroke {
     self.select_stoke.unwrap_or_else(|| {
       Stroke::new(
@@ -550,7 +542,6 @@ impl TreeizeStyle {
       max_scale: None,
       node_frame: None,
       header_frame: None,
-      centering: None,
       select_stoke: None,
       select_fill: None,
       select_rect_contained: None,
@@ -682,17 +673,33 @@ impl TreeizeWidget {
 
   /// Render [`Treeize`] using given viewer and style into the [`Ui`].
   #[inline]
-  pub fn show<T, V>(&self, treeize: &mut Treeize<T>, viewer: &mut V, ui: &mut Ui) -> egui::Response
+  pub fn show<T, V>(
+    &self,
+    treeize: &mut Treeize<T>,
+    viewer: &mut V,
+    ui: &mut Ui,
+    center_signal: Option<&mut bool>,
+  ) -> egui::Response
   where
     V: TreeizeViewer<T>,
   {
     let treeize_id = self.get_id(ui.id());
 
-    show_treeize(treeize_id, self.style, self.min_size, self.max_size, treeize, viewer, ui)
+    show_treeize(
+      treeize_id,
+      self.style,
+      self.min_size,
+      self.max_size,
+      treeize,
+      viewer,
+      ui,
+      center_signal,
+    )
   }
 }
 
 #[inline(never)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn show_treeize<T, V>(
   treeize_id: Id,
   mut style: TreeizeStyle,
@@ -701,12 +708,11 @@ fn show_treeize<T, V>(
   treeize: &mut Treeize<T>,
   viewer: &mut V,
   ui: &mut Ui,
+  center_signal: Option<&mut bool>,
 ) -> egui::Response
 where
   V: TreeizeViewer<T>,
 {
-  #![allow(clippy::too_many_lines)]
-
   let (mut latest_pos, modifiers) = ui.ctx().input(|i| (i.pointer.latest_pos(), i.modifiers));
 
   let bg_frame = style.get_bg_frame(ui.style());
@@ -994,7 +1000,10 @@ where
   }
 
   // Do centering unless no nodes are present.
-  if style.get_centering() && treeize_resp.double_clicked() && nodes_bb.is_finite() {
+  if let Some(center_signal) = center_signal
+    && *center_signal
+    && nodes_bb.is_finite()
+  {
     let nodes_bb = nodes_bb.expand(100.0);
     treeize_state.look_at(nodes_bb, ui_rect, min_scale, max_scale);
   }
@@ -1916,6 +1925,7 @@ impl<T> Treeize<T> {
       self,
       viewer,
       ui,
+      None,
     );
   }
 }
