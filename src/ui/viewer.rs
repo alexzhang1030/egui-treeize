@@ -330,7 +330,7 @@ pub trait TreeizeViewer<T> {
     &mut self,
     background: Option<&BackgroundPattern>,
     viewport: &Rect,
-    snarl_style: &TreeizeStyle,
+    treeize_style: &TreeizeStyle,
     style: &Style,
     painter: &Painter,
     treeize: &Treeize<T>,
@@ -338,7 +338,7 @@ pub trait TreeizeViewer<T> {
     let _ = treeize;
 
     if let Some(background) = background {
-      background.draw(viewport, snarl_style, style, painter);
+      background.draw(viewport, treeize_style, style, painter);
     }
   }
 

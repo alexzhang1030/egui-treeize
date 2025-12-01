@@ -23,9 +23,9 @@ pub enum WireLayer {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum WireId {
-  Connected { snarl_id: Id, out_pin: OutPinId, in_pin: InPinId },
-  NewInput { snarl_id: Id, in_pin: InPinId },
-  NewOutput { snarl_id: Id, out_pin: OutPinId },
+  Connected { treeize_id: Id, out_pin: OutPinId, in_pin: InPinId },
+  NewInput { treeize_id: Id, in_pin: InPinId },
+  NewOutput { treeize_id: Id, out_pin: OutPinId },
 }
 
 /// Controls style in which wire is rendered.

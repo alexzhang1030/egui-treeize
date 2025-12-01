@@ -197,7 +197,7 @@ impl<T> Treeize<T> {
   /// # Examples
   ///
   /// ```
-  /// # use egui_snarl::Treeize;
+  /// # use egui_treeize::Treeize;
   /// let treeize = Treeize::<()>::new();
   /// ```
   #[must_use]
@@ -211,7 +211,7 @@ impl<T> Treeize<T> {
   /// # Examples
   ///
   /// ```
-  /// # use egui_snarl::Treeize;
+  /// # use egui_treeize::Treeize;
   /// let mut treeize = Treeize::<()>::new();
   /// treeize.insert_node(egui::pos2(0.0, 0.0), ());
   /// ```
@@ -227,7 +227,7 @@ impl<T> Treeize<T> {
   /// # Examples
   ///
   /// ```
-  /// # use egui_snarl::Treeize;
+  /// # use egui_treeize::Treeize;
   /// let mut treeize = Treeize::<()>::new();
   /// treeize.insert_node_collapsed(egui::pos2(0.0, 0.0), ());
   /// ```
@@ -257,7 +257,7 @@ impl<T> Treeize<T> {
   /// # Examples
   ///
   /// ```
-  /// # use egui_snarl::Treeize;
+  /// # use egui_treeize::Treeize;
   /// let mut treeize = Treeize::<()>::new();
   /// let node = treeize.insert_node(egui::pos2(0.0, 0.0), ());
   /// treeize.remove_node(node);

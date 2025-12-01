@@ -53,7 +53,7 @@ pub trait TreeizePin {
   #[must_use]
   fn draw(
     self,
-    snarl_style: &TreeizeStyle,
+    treeize_style: &TreeizeStyle,
     style: &Style,
     rect: Rect,
     painter: &Painter,
@@ -167,20 +167,20 @@ impl PinInfo {
 
   /// Returns the shape of the pin.
   #[must_use]
-  pub fn get_shape(&self, snarl_style: &TreeizeStyle) -> PinShape {
-    self.shape.unwrap_or_else(|| snarl_style.get_pin_shape())
+  pub fn get_shape(&self, treeize_style: &TreeizeStyle) -> PinShape {
+    self.shape.unwrap_or_else(|| treeize_style.get_pin_shape())
   }
 
   /// Returns fill color of the pin.
   #[must_use]
-  pub fn get_fill(&self, snarl_style: &TreeizeStyle, style: &Style) -> Color32 {
-    self.fill.unwrap_or_else(|| snarl_style.get_pin_fill(style))
+  pub fn get_fill(&self, treeize_style: &TreeizeStyle, style: &Style) -> Color32 {
+    self.fill.unwrap_or_else(|| treeize_style.get_pin_fill(style))
   }
 
   /// Returns outline stroke of the pin.
   #[must_use]
-  pub fn get_stroke(&self, snarl_style: &TreeizeStyle, style: &Style) -> Stroke {
-    self.stroke.unwrap_or_else(|| snarl_style.get_pin_stroke(style))
+  pub fn get_stroke(&self, treeize_style: &TreeizeStyle, style: &Style) -> Stroke {
+    self.stroke.unwrap_or_else(|| treeize_style.get_pin_stroke(style))
   }
 
   /// Draws the pin and returns color.
@@ -189,19 +189,19 @@ impl PinInfo {
   #[must_use]
   pub fn draw(
     &self,
-    snarl_style: &TreeizeStyle,
+    treeize_style: &TreeizeStyle,
     style: &Style,
     rect: Rect,
     painter: &Painter,
   ) -> PinWireInfo {
-    let shape = self.get_shape(snarl_style);
-    let fill = self.get_fill(snarl_style, style);
-    let stroke = self.get_stroke(snarl_style, style);
+    let shape = self.get_shape(treeize_style);
+    let fill = self.get_fill(treeize_style, style);
+    let stroke = self.get_stroke(treeize_style, style);
     draw_pin(painter, shape, fill, stroke, rect);
 
     PinWireInfo {
       color: self.wire_color.unwrap_or(fill),
-      style: self.wire_style.unwrap_or_else(|| snarl_style.get_wire_style()),
+      style: self.wire_style.unwrap_or_else(|| treeize_style.get_wire_style()),
     }
   }
 }
@@ -209,12 +209,12 @@ impl PinInfo {
 impl TreeizePin for PinInfo {
   fn draw(
     self,
-    snarl_style: &TreeizeStyle,
+    treeize_style: &TreeizeStyle,
     style: &Style,
     rect: Rect,
     painter: &Painter,
   ) -> PinWireInfo {
-    Self::draw(&self, snarl_style, style, rect, painter)
+    Self::draw(&self, treeize_style, style, rect, painter)
   }
 }
 

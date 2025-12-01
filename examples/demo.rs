@@ -401,7 +401,7 @@ impl TreeizeViewer<DemoNode> for DemoViewer {
     }
   }
 
-  fn has_graph_menu(&mut self, _pos: egui::Pos2, _snarl: &mut Treeize<DemoNode>) -> bool {
+  fn has_graph_menu(&mut self, _pos: egui::Pos2, _treeize: &mut Treeize<DemoNode>) -> bool {
     true
   }
 
@@ -429,7 +429,11 @@ impl TreeizeViewer<DemoNode> for DemoViewer {
     }
   }
 
-  fn has_dropped_wire_menu(&mut self, _src_pins: AnyPins, _snarl: &mut Treeize<DemoNode>) -> bool {
+  fn has_dropped_wire_menu(
+    &mut self,
+    _src_pins: AnyPins,
+    _treeize: &mut Treeize<DemoNode>,
+  ) -> bool {
     true
   }
 
@@ -1027,14 +1031,14 @@ fn get_canvas_element() -> Option<web_sys::HtmlCanvasElement> {
   use eframe::wasm_bindgen::JsCast;
 
   let document = web_sys::window()?.document()?;
-  let canvas = document.get_element_by_id("egui_snarl_demo")?;
+  let canvas = document.get_element_by_id("egui_treeize_demo")?;
   canvas.dyn_into::<web_sys::HtmlCanvasElement>().ok()
 }
 
 // When compiling to web using trunk:
 #[cfg(target_arch = "wasm32")]
 fn main() {
-  let canvas = get_canvas_element().expect("Failed to find canvas with id 'egui_snarl_demo'");
+  let canvas = get_canvas_element().expect("Failed to find canvas with id 'egui_treeize_demo'");
 
   let web_options = eframe::WebOptions::default();
 

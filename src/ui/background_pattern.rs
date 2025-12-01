@@ -43,8 +43,8 @@ impl Grid {
     Self { spacing, angle }
   }
 
-  fn draw(&self, viewport: &Rect, snarl_style: &TreeizeStyle, style: &Style, painter: &Painter) {
-    let bg_stroke = snarl_style.get_bg_pattern_stroke(style);
+  fn draw(&self, viewport: &Rect, treeize_style: &TreeizeStyle, style: &Style, painter: &Painter) {
+    let bg_stroke = treeize_style.get_bg_pattern_stroke(style);
 
     let spacing = vec2(self.spacing.x.max(1.0), self.spacing.y.max(1.0));
 
@@ -125,12 +125,12 @@ impl BackgroundPattern {
   pub fn draw(
     &self,
     viewport: &Rect,
-    snarl_style: &TreeizeStyle,
+    treeize_style: &TreeizeStyle,
     style: &Style,
     painter: &Painter,
   ) {
     match self {
-      BackgroundPattern::Grid(g) => g.draw(viewport, snarl_style, style, painter),
+      BackgroundPattern::Grid(g) => g.draw(viewport, treeize_style, style, painter),
       BackgroundPattern::NoPattern => {}
     }
   }

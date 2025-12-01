@@ -595,9 +595,9 @@ impl TreeizeWidget {
   #[must_use]
   #[inline]
   pub fn get_selected_nodes_at(self, ui_id: Id, ctx: &Context) -> Vec<NodeId> {
-    let snarl_id = self.get_id(ui_id);
+    let treeize_id = self.get_id(ui_id);
 
-    ctx.data(|d| d.get_temp::<SelectedNodes>(snarl_id).unwrap_or_default().0).into_vec()
+    ctx.data(|d| d.get_temp::<SelectedNodes>(treeize_id).unwrap_or_default().0).into_vec()
   }
 }
 

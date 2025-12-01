@@ -686,15 +686,15 @@ impl TreeizeWidget {
   where
     V: TreeizeViewer<T>,
   {
-    let snarl_id = self.get_id(ui.id());
+    let treeize_id = self.get_id(ui.id());
 
-    show_snarl(snarl_id, self.style, self.min_size, self.max_size, treeize, viewer, ui)
+    show_treeize(treeize_id, self.style, self.min_size, self.max_size, treeize, viewer, ui)
   }
 }
 
 #[inline(never)]
-fn show_snarl<T, V>(
-  snarl_id: Id,
+fn show_treeize<T, V>(
+  treeize_id: Id,
   mut style: TreeizeStyle,
   min_size: Vec2,
   max_size: Vec2,
@@ -723,25 +723,25 @@ where
   content_rect.max.x = content_rect.max.x.max(content_rect.min.x);
   content_rect.max.y = content_rect.max.y.max(content_rect.min.y);
 
-  let snarl_layer_id = LayerId::new(ui.layer_id().order, snarl_id);
+  let treeize_layer_id = LayerId::new(ui.layer_id().order, treeize_id);
 
-  ui.ctx().set_sublayer(ui.layer_id(), snarl_layer_id);
+  ui.ctx().set_sublayer(ui.layer_id(), treeize_layer_id);
 
   let mut min_scale = style.get_min_scale();
   let mut max_scale = style.get_max_scale();
 
   let ui_rect = content_rect;
 
-  let mut snarl_state =
-    TreeizeState::load(ui.ctx(), snarl_id, treeize, ui_rect, min_scale, max_scale);
-  let mut to_global = snarl_state.to_global();
+  let mut treeize_state =
+    TreeizeState::load(ui.ctx(), treeize_id, treeize, ui_rect, min_scale, max_scale);
+  let mut to_global = treeize_state.to_global();
 
   let clip_rect = ui.clip_rect();
 
   let mut ui = ui.new_child(
     UiBuilder::new()
       .ui_stack_info(UiStackInfo::new(UiKind::Frame).with_frame(bg_frame))
-      .layer_id(snarl_layer_id)
+      .layer_id(treeize_layer_id)
       .max_rect(Rect::EVERYTHING)
       .sense(Sense::click_and_drag()),
   );
@@ -756,21 +756,21 @@ where
 
   clamp_scale(&mut to_global, min_scale, max_scale, ui_rect);
 
-  let mut snarl_resp = ui.response();
+  let mut treeize_resp = ui.response();
   Scene::new().zoom_range(min_scale..=max_scale).register_pan_and_zoom(
     &ui,
-    &mut snarl_resp,
+    &mut treeize_resp,
     &mut to_global,
   );
 
-  if snarl_resp.changed() {
+  if treeize_resp.changed() {
     ui.ctx().request_repaint();
   }
 
   // Inform viewer about current transform.
   viewer.current_transform(&mut to_global, treeize);
 
-  snarl_state.set_to_global(to_global);
+  treeize_state.set_to_global(to_global);
 
   let to_global = to_global;
   let from_global = to_global.inverse();
@@ -783,7 +783,7 @@ where
   ui.expand_to_include_rect(viewport);
 
   // Set transform for treeize layer.
-  ui.ctx().set_transform_layer(snarl_layer_id, to_global);
+  ui.ctx().set_transform_layer(treeize_layer_id, to_global);
 
   // Map latest pointer position to graph space.
   latest_pos = latest_pos.map(|pos| from_global * pos);
@@ -802,24 +802,24 @@ where
 
   // Process selection rect.
   let mut rect_selection_ended = None;
-  if modifiers.shift || snarl_state.is_rect_selection() {
-    let select_resp = ui.interact(snarl_resp.rect, snarl_id.with("select"), Sense::drag());
+  if modifiers.shift || treeize_state.is_rect_selection() {
+    let select_resp = ui.interact(treeize_resp.rect, treeize_id.with("select"), Sense::drag());
 
     if select_resp.dragged_by(PointerButton::Primary)
       && let Some(pos) = select_resp.interact_pointer_pos()
     {
-      if snarl_state.is_rect_selection() {
-        snarl_state.update_rect_selection(pos);
+      if treeize_state.is_rect_selection() {
+        treeize_state.update_rect_selection(pos);
       } else {
-        snarl_state.start_rect_selection(pos);
+        treeize_state.start_rect_selection(pos);
       }
     }
 
     if select_resp.drag_stopped_by(PointerButton::Primary) {
-      if let Some(select_rect) = snarl_state.rect_selection() {
+      if let Some(select_rect) = treeize_state.rect_selection() {
         rect_selection_ended = Some(select_rect);
       }
-      snarl_state.stop_rect_selection();
+      treeize_state.stop_rect_selection();
     }
   }
 
@@ -837,7 +837,7 @@ where
 
   let mut pin_hovered = None;
 
-  let draw_order = snarl_state.update_draw_order(treeize);
+  let draw_order = treeize_state.update_draw_order(treeize);
   let mut drag_released = false;
 
   let mut nodes_bb = Rect::NOTHING;
@@ -854,9 +854,9 @@ where
       &mut ui,
       node_idx,
       viewer,
-      &mut snarl_state,
+      &mut treeize_state,
       &style,
-      snarl_id,
+      treeize_id,
       &mut input_info,
       modifiers,
       &mut output_info,
@@ -894,7 +894,7 @@ where
       continue;
     };
 
-    if !snarl_state.has_new_wires() && snarl_resp.contains_pointer() && hovered_wire.is_none() {
+    if !treeize_state.has_new_wires() && treeize_resp.contains_pointer() && hovered_wire.is_none() {
       // Try to find hovered wire
       // If not dragging new wire
       // And not hovering over item above.
@@ -902,7 +902,7 @@ where
       if let Some(latest_pos) = latest_pos {
         let wire_hit = hit_wire(
           ui.ctx(),
-          WireId::Connected { snarl_id, out_pin: wire.out_pin, in_pin: wire.in_pin },
+          WireId::Connected { treeize_id, out_pin: wire.out_pin, in_pin: wire.in_pin },
           wire_frame_size,
           style.get_upscale_wire_frame(),
           style.get_downscale_wire_frame(),
@@ -916,7 +916,7 @@ where
         if wire_hit {
           hovered_wire = Some(wire);
 
-          let wire_r = ui.interact(snarl_resp.rect, ui.make_persistent_id(wire), Sense::click());
+          let wire_r = ui.interact(treeize_resp.rect, ui.make_persistent_id(wire), Sense::click());
 
           //Remove hovered wire by second click
           hovered_wire_disconnect |= wire_r.clicked_by(PointerButton::Secondary);
@@ -933,7 +933,7 @@ where
 
     draw_wire(
       &ui,
-      WireId::Connected { snarl_id, out_pin: wire.out_pin, in_pin: wire.in_pin },
+      WireId::Connected { treeize_id, out_pin: wire.out_pin, in_pin: wire.in_pin },
       &mut wire_shapes,
       wire_frame_size,
       style.get_upscale_wire_frame(),
@@ -965,13 +965,13 @@ where
     });
 
     if modifiers.command {
-      snarl_state.deselect_many_nodes(select_nodes);
+      treeize_state.deselect_many_nodes(select_nodes);
     } else {
-      snarl_state.select_many_nodes(!modifiers.shift, select_nodes);
+      treeize_state.select_many_nodes(!modifiers.shift, select_nodes);
     }
   }
 
-  if let Some(select_rect) = snarl_state.rect_selection() {
+  if let Some(select_rect) = treeize_state.rect_selection() {
     ui.painter().rect(
       select_rect,
       0.0,
@@ -987,26 +987,27 @@ where
   //
   // This uses `button_down` directly, instead of `clicked_by` to improve
   // responsiveness of the cancel action.
-  if snarl_state.has_new_wires() && ui.input(|x| x.pointer.button_down(PointerButton::Secondary)) {
-    let _ = snarl_state.take_new_wires();
-    snarl_resp.flags.remove(Flags::CLICKED);
+  if treeize_state.has_new_wires() && ui.input(|x| x.pointer.button_down(PointerButton::Secondary))
+  {
+    let _ = treeize_state.take_new_wires();
+    treeize_resp.flags.remove(Flags::CLICKED);
   }
 
   // Do centering unless no nodes are present.
-  if style.get_centering() && snarl_resp.double_clicked() && nodes_bb.is_finite() {
+  if style.get_centering() && treeize_resp.double_clicked() && nodes_bb.is_finite() {
     let nodes_bb = nodes_bb.expand(100.0);
-    snarl_state.look_at(nodes_bb, ui_rect, min_scale, max_scale);
+    treeize_state.look_at(nodes_bb, ui_rect, min_scale, max_scale);
   }
 
-  if modifiers.command && snarl_resp.clicked_by(PointerButton::Primary) {
-    snarl_state.deselect_all_nodes();
+  if modifiers.command && treeize_resp.clicked_by(PointerButton::Primary) {
+    treeize_state.deselect_all_nodes();
   }
 
   // Wire end position will be overridden when link graph menu is opened.
-  let mut wire_end_pos = latest_pos.unwrap_or_else(|| snarl_resp.rect.center());
+  let mut wire_end_pos = latest_pos.unwrap_or_else(|| treeize_resp.rect.center());
 
   if drag_released {
-    let new_wires = snarl_state.take_new_wires();
+    let new_wires = treeize_state.take_new_wires();
     if new_wires.is_some() {
       ui.ctx().request_repaint();
     }
@@ -1021,7 +1022,7 @@ where
           viewer.connect(&OutPin::new(treeize, out_pin), &InPin::new(treeize, in_pin), treeize);
         }
       }
-      (Some(new_wires), None) if snarl_resp.hovered() => {
+      (Some(new_wires), None) if treeize_resp.hovered() => {
         let pins = match &new_wires {
           NewWires::In(x) => AnyPins::In(x),
           NewWires::Out(x) => AnyPins::Out(x),
@@ -1030,10 +1031,10 @@ where
         if viewer.has_dropped_wire_menu(pins, treeize) {
           // A wire is dropped without connecting to a pin.
           // Show context menu for the wire drop.
-          snarl_state.set_new_wires_menu(new_wires);
+          treeize_state.set_new_wires_menu(new_wires);
 
           // Force open context menu.
-          snarl_resp.flags.insert(Flags::LONG_TOUCHED);
+          treeize_resp.flags.insert(Flags::LONG_TOUCHED);
         }
       }
       _ => {}
@@ -1041,14 +1042,14 @@ where
   }
 
   if let Some(interact_pos) = ui.ctx().input(|i| i.pointer.interact_pos()) {
-    if let Some(new_wires) = snarl_state.take_new_wires_menu() {
+    if let Some(new_wires) = treeize_state.take_new_wires_menu() {
       let pins = match &new_wires {
         NewWires::In(x) => AnyPins::In(x),
         NewWires::Out(x) => AnyPins::Out(x),
       };
 
       if viewer.has_dropped_wire_menu(pins, treeize) {
-        snarl_resp.context_menu(|ui| {
+        treeize_resp.context_menu(|ui| {
           let pins = match &new_wires {
             NewWires::In(x) => AnyPins::In(x),
             NewWires::Out(x) => AnyPins::Out(x),
@@ -1065,11 +1066,11 @@ where
           // Even though menu could be closed in `show_dropped_wire_menu`,
           // we need to revert the new wires here, because menu state is inaccessible.
           // Next frame context menu won't be shown and wires will be removed.
-          snarl_state.set_new_wires_menu(new_wires);
+          treeize_state.set_new_wires_menu(new_wires);
         });
       }
     } else if viewer.has_graph_menu(interact_pos, treeize) {
-      snarl_resp.context_menu(|ui| {
+      treeize_resp.context_menu(|ui| {
         let menu_pos = from_global * ui.cursor().min;
 
         viewer.show_graph_menu(menu_pos, ui, treeize);
@@ -1077,7 +1078,7 @@ where
     }
   }
 
-  match snarl_state.new_wires() {
+  match treeize_state.new_wires() {
     None => {}
     Some(NewWires::In(in_pins)) => {
       for &in_pin in in_pins {
@@ -1086,7 +1087,7 @@ where
 
         draw_wire(
           &ui,
-          WireId::NewInput { snarl_id, in_pin },
+          WireId::NewInput { treeize_id, in_pin },
           &mut wire_shapes,
           wire_frame_size,
           style.get_upscale_wire_frame(),
@@ -1106,7 +1107,7 @@ where
 
         draw_wire(
           &ui,
-          WireId::NewOutput { snarl_id, out_pin },
+          WireId::NewOutput { treeize_id, out_pin },
           &mut wire_shapes,
           wire_frame_size,
           style.get_upscale_wire_frame(),
@@ -1130,20 +1131,20 @@ where
     }
   }
 
-  ui.advance_cursor_after_rect(Rect::from_min_size(snarl_resp.rect.min, Vec2::ZERO));
+  ui.advance_cursor_after_rect(Rect::from_min_size(treeize_resp.rect.min, Vec2::ZERO));
 
   if let Some(node) = node_to_top
     && treeize.nodes.contains(node.0)
   {
-    snarl_state.node_to_top(node);
+    treeize_state.node_to_top(node);
   }
 
   if let Some((node, delta)) = node_moved
     && treeize.nodes.contains(node.0)
   {
     ui.ctx().request_repaint();
-    if snarl_state.selected_nodes().contains(&node) {
-      for node in snarl_state.selected_nodes() {
+    if treeize_state.selected_nodes().contains(&node) {
+      for node in treeize_state.selected_nodes() {
         let node = &mut treeize.nodes[node.0];
         node.pos += delta;
       }
@@ -1153,9 +1154,9 @@ where
     }
   }
 
-  snarl_state.store(treeize, ui.ctx());
+  treeize_state.store(treeize, ui.ctx());
 
-  snarl_resp
+  treeize_resp
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1174,7 +1175,7 @@ fn draw_inputs<T, V>(
   min_pin_y_top: f32,
   min_pin_y_bottom: f32,
   input_spacing: Option<f32>,
-  snarl_state: &mut TreeizeState,
+  treeize_state: &mut TreeizeState,
   modifiers: Modifiers,
   input_positions: &mut HashMap<InPinId, PinResponse>,
   heights: Heights,
@@ -1193,7 +1194,7 @@ where
       .id_salt("inputs"),
   );
 
-  let snarl_clip_rect = node_ui.clip_rect();
+  let treeize_clip_rect = node_ui.clip_rect();
   inputs_ui.shrink_clip_rect(payload_clip_rect);
 
   let pin_layout = Layout::left_to_right(Align::Min);
@@ -1220,25 +1221,25 @@ where
       let y1 = pin_ui.max_rect().max.y;
 
       // Show input content
-      let snarl_pin = viewer.show_input(in_pin, pin_ui, treeize);
+      let treeize_pin = viewer.show_input(in_pin, pin_ui, treeize);
       if !treeize.nodes.contains(node.0) {
         // If removed
         return;
       }
 
       let pin_rect =
-        snarl_pin.pin_rect(input_x, min_pin_y_top.max(y0), min_pin_y_bottom.max(y1), pin_size);
+        treeize_pin.pin_rect(input_x, min_pin_y_top.max(y0), min_pin_y_bottom.max(y1), pin_size);
 
       // Interact with pin shape.
-      pin_ui.set_clip_rect(snarl_clip_rect);
+      pin_ui.set_clip_rect(treeize_clip_rect);
 
       let r = pin_ui.interact(pin_rect, pin_ui.next_auto_id(), Sense::click_and_drag());
 
       pin_ui.skip_ahead_auto_ids(1);
 
       if r.clicked_by(PointerButton::Secondary) {
-        if snarl_state.has_new_wires() {
-          snarl_state.remove_new_wire_in(in_pin.id);
+        if treeize_state.has_new_wires() {
+          treeize_state.remove_new_wire_in(in_pin.id);
         } else {
           viewer.drop_inputs(in_pin, treeize);
           if !treeize.nodes.contains(node.0) {
@@ -1249,7 +1250,7 @@ where
       }
       if r.drag_started_by(PointerButton::Primary) {
         if modifiers.command {
-          snarl_state.start_new_wires_out(&in_pin.remotes);
+          treeize_state.start_new_wires_out(&in_pin.remotes);
           if !modifiers.shift {
             treeize.drop_inputs(in_pin.id);
             if !treeize.nodes.contains(node.0) {
@@ -1258,7 +1259,7 @@ where
             }
           }
         } else {
-          snarl_state.start_new_wire_in(in_pin.id);
+          treeize_state.start_new_wire_in(in_pin.id);
         }
       }
 
@@ -1269,19 +1270,19 @@ where
       let mut visual_pin_rect = r.rect;
 
       if r.contains_pointer() {
-        if snarl_state.has_new_wires_in() {
+        if treeize_state.has_new_wires_in() {
           if modifiers.shift && !modifiers.command {
-            snarl_state.add_new_wire_in(in_pin.id);
+            treeize_state.add_new_wire_in(in_pin.id);
           }
           if !modifiers.shift && modifiers.command {
-            snarl_state.remove_new_wire_in(in_pin.id);
+            treeize_state.remove_new_wire_in(in_pin.id);
           }
         }
         pin_hovered = Some(AnyPin::In(in_pin.id));
         visual_pin_rect = visual_pin_rect.scale_from_center(1.2);
       }
 
-      let wire_info = snarl_pin.draw(style, pin_ui.style(), visual_pin_rect, pin_ui.painter());
+      let wire_info = treeize_pin.draw(style, pin_ui.style(), visual_pin_rect, pin_ui.painter());
 
       input_positions.insert(
         in_pin.id,
@@ -1320,7 +1321,7 @@ fn draw_outputs<T, V>(
   min_pin_y_top: f32,
   min_pin_y_bottom: f32,
   output_spacing: Option<f32>,
-  snarl_state: &mut TreeizeState,
+  treeize_state: &mut TreeizeState,
   modifiers: Modifiers,
   output_positions: &mut HashMap<OutPinId, PinResponse>,
   heights: Heights,
@@ -1338,7 +1339,7 @@ where
       .id_salt("outputs"),
   );
 
-  let snarl_clip_rect = node_ui.clip_rect();
+  let treeize_clip_rect = node_ui.clip_rect();
   outputs_ui.shrink_clip_rect(payload_clip_rect);
 
   let pin_layout = Layout::right_to_left(Align::Min);
@@ -1367,24 +1368,24 @@ where
       let y1 = pin_ui.max_rect().max.y;
 
       // Show output content
-      let snarl_pin = viewer.show_output(out_pin, pin_ui, treeize);
+      let treeize_pin = viewer.show_output(out_pin, pin_ui, treeize);
       if !treeize.nodes.contains(node.0) {
         // If removed
         return;
       }
 
       let pin_rect =
-        snarl_pin.pin_rect(output_x, min_pin_y_top.max(y0), min_pin_y_bottom.max(y1), pin_size);
+        treeize_pin.pin_rect(output_x, min_pin_y_top.max(y0), min_pin_y_bottom.max(y1), pin_size);
 
-      pin_ui.set_clip_rect(snarl_clip_rect);
+      pin_ui.set_clip_rect(treeize_clip_rect);
 
       let r = pin_ui.interact(pin_rect, pin_ui.next_auto_id(), Sense::click_and_drag());
 
       pin_ui.skip_ahead_auto_ids(1);
 
       if r.clicked_by(PointerButton::Secondary) {
-        if snarl_state.has_new_wires() {
-          snarl_state.remove_new_wire_out(out_pin.id);
+        if treeize_state.has_new_wires() {
+          treeize_state.remove_new_wire_out(out_pin.id);
         } else {
           viewer.drop_outputs(out_pin, treeize);
           if !treeize.nodes.contains(node.0) {
@@ -1395,7 +1396,7 @@ where
       }
       if r.drag_started_by(PointerButton::Primary) {
         if modifiers.command {
-          snarl_state.start_new_wires_in(&out_pin.remotes);
+          treeize_state.start_new_wires_in(&out_pin.remotes);
 
           if !modifiers.shift {
             treeize.drop_outputs(out_pin.id);
@@ -1405,7 +1406,7 @@ where
             }
           }
         } else {
-          snarl_state.start_new_wire_out(out_pin.id);
+          treeize_state.start_new_wire_out(out_pin.id);
         }
       }
 
@@ -1416,19 +1417,19 @@ where
       let mut visual_pin_rect = r.rect;
 
       if r.contains_pointer() {
-        if snarl_state.has_new_wires_out() {
+        if treeize_state.has_new_wires_out() {
           if modifiers.shift && !modifiers.command {
-            snarl_state.add_new_wire_out(out_pin.id);
+            treeize_state.add_new_wire_out(out_pin.id);
           }
           if !modifiers.shift && modifiers.command {
-            snarl_state.remove_new_wire_out(out_pin.id);
+            treeize_state.remove_new_wire_out(out_pin.id);
           }
         }
         pin_hovered = Some(AnyPin::Out(out_pin.id));
         visual_pin_rect = visual_pin_rect.scale_from_center(1.2);
       }
 
-      let wire_info = snarl_pin.draw(style, pin_ui.style(), visual_pin_rect, pin_ui.painter());
+      let wire_info = treeize_pin.draw(style, pin_ui.style(), visual_pin_rect, pin_ui.painter());
 
       output_positions.insert(
         out_pin.id,
@@ -1460,7 +1461,7 @@ fn draw_body<T, V>(
   ui: &mut Ui,
   body_rect: Rect,
   payload_clip_rect: Rect,
-  _snarl_state: &TreeizeState,
+  _treeize_state: &TreeizeState,
 ) -> DrawBodyResponse
 where
   V: TreeizeViewer<T>,
@@ -1493,9 +1494,9 @@ fn draw_node<T, V>(
   ui: &mut Ui,
   node: NodeId,
   viewer: &mut V,
-  snarl_state: &mut TreeizeState,
+  treeize_state: &mut TreeizeState,
   style: &TreeizeStyle,
-  snarl_id: Id,
+  treeize_id: Id,
   input_positions: &mut HashMap<InPinId, PinResponse>,
   modifiers: Modifiers,
   output_positions: &mut HashMap<OutPinId, PinResponse>,
@@ -1520,7 +1521,7 @@ where
   let node_pos = pos.round_ui();
 
   // Generate persistent id for the node.
-  let node_id = snarl_id.with(("snarl-node", node));
+  let node_id = treeize_id.with(("snarl-node", node));
 
   let openness = ui.ctx().animate_bool(node_id, open);
 
@@ -1542,7 +1543,7 @@ where
   // Rect for node + frame margin.
   let node_frame_rect = node_rect + node_frame.total_margin();
 
-  if snarl_state.selected_nodes().contains(&node) {
+  if treeize_state.selected_nodes().contains(&node) {
     let select_style = style.get_select_style(ui.style());
 
     let select_rect = node_frame_rect + select_style.margin;
@@ -1573,9 +1574,9 @@ where
 
   if r.clicked_by(PointerButton::Primary) || r.dragged_by(PointerButton::Primary) {
     if modifiers.shift {
-      snarl_state.select_one_node(modifiers.command, node);
+      treeize_state.select_one_node(modifiers.command, node);
     } else if modifiers.command {
-      snarl_state.deselect_one_node(node);
+      treeize_state.deselect_one_node(node);
     }
   }
 
@@ -1693,7 +1694,7 @@ where
           node_rect.min.y,
           node_rect.min.y + node_state.header_height(),
           input_spacing,
-          snarl_state,
+          treeize_state,
           modifiers,
           input_positions,
           node_layout.input_heights(&node_state),
@@ -1731,7 +1732,7 @@ where
           node_rect.min.y,
           node_rect.min.y + node_state.header_height(),
           output_spacing,
-          snarl_state,
+          treeize_state,
           modifiers,
           output_positions,
           node_layout.output_heights(&node_state),
@@ -1779,7 +1780,7 @@ where
             ui,
             body_rect,
             payload_clip_rect,
-            snarl_state,
+            treeize_state,
           );
 
           new_pins_size.x += r.final_rect.width() + ui.spacing().item_spacing.x;
@@ -1919,7 +1920,7 @@ impl<T> Treeize<T> {
   where
     V: TreeizeViewer<T>,
   {
-    show_snarl(
+    show_treeize(
       ui.make_persistent_id(id_salt),
       *style,
       Vec2::ZERO,
@@ -1955,7 +1956,7 @@ fn scale_transform_around(transform: &TSTransform, scaling: f32, point: Pos2) ->
 }
 
 #[test]
-const fn snarl_style_is_send_sync() {
+const fn treeize_style_is_send_sync() {
   const fn is_send_sync<T: Send + Sync>() {}
   is_send_sync::<TreeizeStyle>();
 }
