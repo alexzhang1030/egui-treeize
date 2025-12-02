@@ -19,7 +19,7 @@ use crate::{InPin, InPinId, Node, NodeId, OutPin, OutPinId, Treeize, ui::wire::W
 mod background_pattern;
 mod pin;
 mod scale;
-mod state;
+pub(crate) mod state;
 mod viewer;
 mod wire;
 

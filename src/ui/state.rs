@@ -27,8 +27,8 @@ pub struct NodeState {
 }
 
 #[derive(Clone, PartialEq)]
-struct NodeData {
-  size: Vec2,
+pub(crate) struct NodeData {
+  pub(crate) size: Vec2,
   header_height: f32,
   input_heights: RowHeights,
   output_heights: RowHeights,

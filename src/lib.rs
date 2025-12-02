@@ -9,6 +9,7 @@
 #![warn(clippy::pedantic, clippy::dbg_macro, clippy::must_use_candidate)]
 #![allow(clippy::range_plus_one, clippy::inline_always, clippy::use_self)]
 
+pub mod layout;
 pub mod ui;
 
 use std::ops::{Index, IndexMut};
