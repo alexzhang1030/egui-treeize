@@ -14,3 +14,4 @@ Most of the apis are the same as in [egui-snarl](https://github.com/zakarumych/e
 - Supports `readonly` and `editable` modes. Defaults is `readonly`.
 - No draggable nodes for readonly mode, no deletable wires for dual modes.
 - No multiple input/output pins for a node. We connect all wires to the same input/output pin.
+- No footer.

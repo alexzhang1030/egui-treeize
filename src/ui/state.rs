@@ -113,22 +113,6 @@ impl NodeState {
     &self.output_heights
   }
 
-  pub fn set_input_heights(&mut self, input_heights: RowHeights) {
-    #[allow(clippy::float_cmp)]
-    if self.input_heights != input_heights {
-      self.input_heights = input_heights;
-      self.dirty = true;
-    }
-  }
-
-  pub fn set_output_heights(&mut self, output_heights: RowHeights) {
-    #[allow(clippy::float_cmp)]
-    if self.output_heights != output_heights {
-      self.output_heights = output_heights;
-      self.dirty = true;
-    }
-  }
-
   const fn initial(id: Id, spacing: &Spacing) -> Self {
     NodeState {
       size: spacing.interact_size,

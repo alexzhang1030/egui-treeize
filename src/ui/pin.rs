@@ -36,9 +36,9 @@ pub struct PinWireInfo {
 /// Uses `Painter` to draw a pin.
 pub trait TreeizePin {
   /// Calculates pin Rect from the given parameters.
-  fn pin_rect(&self, x: f32, y0: f32, y1: f32, size: f32) -> Rect {
+  fn pin_rect(&self, x0: f32, x1: f32, y: f32, size: f32) -> Rect {
     // Center vertically by default.
-    let y = (y0 + y1) * 0.5;
+    let x = (x0 + x1) * 0.5;
     let pin_pos = pos2(x, y);
     Rect::from_center_size(pin_pos, vec2(size, size))
   }

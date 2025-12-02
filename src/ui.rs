@@ -13,7 +13,6 @@ use egui::{
   vec2,
 };
 use egui_scale::EguiScale;
-use smallvec::SmallVec;
 
 use crate::{InPin, InPinId, Node, NodeId, OutPin, OutPinId, Treeize, ui::wire::WireId};
 
@@ -26,7 +25,7 @@ mod wire;
 
 use self::{
   pin::AnyPin,
-  state::{NewWires, NodeState, RowHeights, TreeizeState},
+  state::{NewWires, NodeState, TreeizeState},
   wire::{draw_wire, hit_wire, pick_wire_style},
 };
 
@@ -568,8 +567,6 @@ struct DrawNodeResponse {
 struct DrawPinsResponse {
   drag_released: bool,
   pin_hovered: Option<AnyPin>,
-  final_rect: Rect,
-  new_heights: RowHeights,
 }
 
 struct DrawBodyResponse {
@@ -1176,10 +1173,9 @@ fn draw_inputs<T, V>(
   node_ui: &mut Ui,
   inputs_rect: Rect,
   payload_clip_rect: Rect,
-  input_x: f32,
-  min_pin_y_top: f32,
-  min_pin_y_bottom: f32,
-  input_spacing: Option<f32>,
+  input_y: f32,
+  min_pin_x_left: f32,
+  min_pin_x_right: f32,
   treeize_state: &mut TreeizeState,
   modifiers: Modifiers,
   input_positions: &mut HashMap<InPinId, PinResponse>,
@@ -1203,7 +1199,6 @@ where
   inputs_ui.shrink_clip_rect(payload_clip_rect);
 
   let pin_layout = Layout::left_to_right(Align::Min);
-  let mut new_heights = SmallVec::with_capacity(inputs.len());
 
   for in_pin in inputs {
     // Show input pin.
@@ -1217,13 +1212,8 @@ where
     let builder = UiBuilder::new().layout(pin_layout).max_rect(inner_rect);
 
     inputs_ui.scope_builder(builder, |pin_ui| {
-      if let Some(input_spacing) = input_spacing {
-        let min = pin_ui.next_widget_position();
-        pin_ui.advance_cursor_after_rect(Rect::from_min_size(min, vec2(input_spacing, pin_size)));
-      }
-
-      let y0 = pin_ui.max_rect().min.y;
-      let y1 = pin_ui.max_rect().max.y;
+      let x0 = pin_ui.max_rect().min.x;
+      let x1 = pin_ui.max_rect().max.x;
 
       // Show input content
       let treeize_pin = viewer.show_input(in_pin, pin_ui, treeize);
@@ -1233,7 +1223,7 @@ where
       }
 
       let pin_rect =
-        treeize_pin.pin_rect(input_x, min_pin_y_top.max(y0), min_pin_y_bottom.max(y1), pin_size);
+        treeize_pin.pin_rect(min_pin_x_left.max(x0), min_pin_x_right.max(x1), input_y, pin_size);
 
       // Interact with pin shape.
       pin_ui.set_clip_rect(treeize_clip_rect);
@@ -1298,8 +1288,6 @@ where
         },
       );
 
-      new_heights.push(pin_ui.min_rect().height());
-
       pin_ui.expand_to_include_y(outer_rect.bottom());
     });
   }
@@ -1307,7 +1295,7 @@ where
   let final_rect = inputs_ui.min_rect();
   node_ui.expand_to_include_rect(final_rect.intersect(payload_clip_rect));
 
-  DrawPinsResponse { drag_released, pin_hovered, final_rect, new_heights }
+  DrawPinsResponse { drag_released, pin_hovered }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1322,10 +1310,9 @@ fn draw_outputs<T, V>(
   node_ui: &mut Ui,
   outputs_rect: Rect,
   payload_clip_rect: Rect,
-  output_x: f32,
-  min_pin_y_top: f32,
-  min_pin_y_bottom: f32,
-  output_spacing: Option<f32>,
+  output_y: f32,
+  min_pin_y_left: f32,
+  min_pin_y_right: f32,
   treeize_state: &mut TreeizeState,
   modifiers: Modifiers,
   output_positions: &mut HashMap<OutPinId, PinResponse>,
@@ -1348,7 +1335,6 @@ where
   outputs_ui.shrink_clip_rect(payload_clip_rect);
 
   let pin_layout = Layout::right_to_left(Align::Min);
-  let mut new_heights = SmallVec::with_capacity(outputs.len());
 
   // Output pins on the right.
   for out_pin in outputs {
@@ -1363,14 +1349,8 @@ where
     let builder = UiBuilder::new().layout(pin_layout).max_rect(inner_rect);
 
     outputs_ui.scope_builder(builder, |pin_ui| {
-      // Allocate space for pin shape.
-      if let Some(output_spacing) = output_spacing {
-        let min = pin_ui.next_widget_position();
-        pin_ui.advance_cursor_after_rect(Rect::from_min_size(min, vec2(output_spacing, pin_size)));
-      }
-
-      let y0 = pin_ui.max_rect().min.y;
-      let y1 = pin_ui.max_rect().max.y;
+      let x0 = pin_ui.max_rect().min.x;
+      let x1 = pin_ui.max_rect().max.x;
 
       // Show output content
       let treeize_pin = viewer.show_output(out_pin, pin_ui, treeize);
@@ -1380,7 +1360,7 @@ where
       }
 
       let pin_rect =
-        treeize_pin.pin_rect(output_x, min_pin_y_top.max(y0), min_pin_y_bottom.max(y1), pin_size);
+        treeize_pin.pin_rect(min_pin_y_left.max(x0), min_pin_y_right.max(x1), output_y, pin_size);
 
       pin_ui.set_clip_rect(treeize_clip_rect);
 
@@ -1445,15 +1425,13 @@ where
         },
       );
 
-      new_heights.push(pin_ui.min_rect().height());
-
       pin_ui.expand_to_include_y(outer_rect.bottom());
     });
   }
   let final_rect = outputs_ui.min_rect();
   node_ui.expand_to_include_rect(final_rect.intersect(payload_clip_rect));
 
-  DrawPinsResponse { drag_released, pin_hovered, final_rect, new_heights }
+  DrawPinsResponse { drag_released, pin_hovered }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1617,8 +1595,6 @@ where
       .id_salt(node_id),
   );
 
-  let mut new_pins_size = Vec2::ZERO;
-
   let r = node_frame.show(node_ui, |ui| {
     if viewer.has_node_style(node, &inputs, &outputs, treeize) {
       viewer.apply_node_style(ui.style_mut(), node, &inputs, &outputs, treeize);
@@ -1741,8 +1717,58 @@ where
     let header_size = header_rect.size();
     node_state.set_header_height(header_size.y);
 
+    match node_layout.kind {
+      NodeLayoutKind::Compact => {
+        let r = draw_inputs(
+          treeize,
+          viewer,
+          node,
+          &inputs,
+          pin_size,
+          style,
+          ui,
+          payload_rect,
+          payload_clip_rect,
+          input_y,
+          header_rect.min.x,
+          header_rect.max.x,
+          treeize_state,
+          modifiers,
+          input_positions,
+          node_layout.input_heights(&node_state),
+        );
+        drag_released |= r.drag_released;
+        if r.pin_hovered.is_some() {
+          pin_hovered = r.pin_hovered;
+        }
+
+        let r = draw_outputs(
+          treeize,
+          viewer,
+          node,
+          &outputs,
+          pin_size,
+          style,
+          ui,
+          payload_rect,
+          payload_clip_rect,
+          output_y,
+          header_rect.min.x,
+          header_rect.max.x,
+          treeize_state,
+          modifiers,
+          output_positions,
+          node_layout.output_heights(&node_state),
+        );
+        drag_released |= r.drag_released;
+        if r.pin_hovered.is_some() {
+          pin_hovered = r.pin_hovered;
+        }
+      }
+    }
+
     node_state.set_size(vec2(
-      f32::max(header_size.x, new_pins_size.x),
+      f32::max(header_size.x, body_rect.width()),
       header_size.y
         + header_frame.total_margin().bottom
         + ui.spacing().item_spacing.y
