@@ -1009,15 +1009,15 @@ impl Default for AxisAlignedWire {
 fn wire_axis_aligned(corner_radius: f32, frame_size: f32, from: Pos2, to: Pos2) -> AxisAlignedWire {
   let corner_radius = corner_radius.max(0.0);
 
-  let half_height = f32::abs(from.y - to.y) / 2.0;
-  let max_radius = (half_height / 2.0).min(corner_radius);
+  let half_width = f32::abs(from.x - to.x) / 2.0;
+  let max_radius = (half_width / 2.0).min(corner_radius);
 
   let frame_size = frame_size.max(max_radius * 2.0);
 
   let zero_segment = (Pos2::ZERO, Pos2::ZERO);
 
-  if from.x + frame_size <= to.x - frame_size {
-    if f32::abs(from.y - to.y) < 1.0 {
+  if from.y + frame_size <= to.y - frame_size {
+    if f32::abs(from.x - to.x) < 1.0 {
       // Single segment case.
       AxisAlignedWire {
         aabb: Rect::from_two_pos(from, to),
@@ -1028,24 +1028,24 @@ fn wire_axis_aligned(corner_radius: f32, frame_size: f32, from: Pos2, to: Pos2) 
       }
     } else {
       // Two turns case.
-      let mid_x = f32::midpoint(from.x, to.x);
-      let half_width = (to.x - from.x) / 2.0;
+      let mid_y = f32::midpoint(from.y, to.y);
+      let half_height = (to.y - from.y) / 2.0;
 
-      let turn_radius = max_radius.min(half_width);
+      let turn_radius = max_radius.min(half_height);
 
-      let turn_vert_len = if from.y < to.y { turn_radius } else { -turn_radius };
+      let turn_horz_len = if from.x < to.x { turn_radius } else { -turn_radius };
 
       let segments = [
-        (from, pos2(mid_x - turn_radius, from.y)),
-        (pos2(mid_x, from.y + turn_vert_len), pos2(mid_x, to.y - turn_vert_len)),
-        (pos2(mid_x + turn_radius, to.y), to),
+        (from, pos2(from.x, mid_y - turn_radius)),
+        (pos2(from.x + turn_horz_len, mid_y), pos2(to.x - turn_horz_len, mid_y)),
+        (pos2(to.x, mid_y + turn_radius), to),
         zero_segment,
         zero_segment,
       ];
 
       let turn_centers = [
-        pos2(mid_x - turn_radius, from.y + turn_vert_len),
-        pos2(mid_x + turn_radius, to.y - turn_vert_len),
+        pos2(from.x + turn_horz_len, mid_y - turn_radius),
+        pos2(to.x - turn_horz_len, mid_y + turn_radius),
         Pos2::ZERO,
         Pos2::ZERO,
       ];
@@ -1062,41 +1062,41 @@ fn wire_axis_aligned(corner_radius: f32, frame_size: f32, from: Pos2, to: Pos2) 
     }
   } else {
     // Four turns case.
-    let mid = f32::midpoint(from.y, to.y);
+    let mid = f32::midpoint(from.x, to.x);
 
-    let right = from.x + frame_size;
-    let left = to.x - frame_size;
+    let bottom = from.y + frame_size;
+    let top = to.y - frame_size;
 
-    let half_width = f32::abs(right - left) / 2.0;
+    let half_height = f32::abs(bottom - top) / 2.0;
 
     let ends_turn_radius = max_radius;
-    let middle_turn_radius = max_radius.min(half_width);
+    let middle_turn_radius = max_radius.min(half_height);
 
-    let ends_turn_vert_len = if from.y < to.y { ends_turn_radius } else { -ends_turn_radius };
+    let ends_turn_horz_len = if from.x < to.x { ends_turn_radius } else { -ends_turn_radius };
 
-    let middle_turn_vert_len = if from.y < to.y { middle_turn_radius } else { -middle_turn_radius };
+    let middle_turn_horz_len = if from.x < to.x { middle_turn_radius } else { -middle_turn_radius };
 
     let segments = [
-      (from, pos2(right - ends_turn_radius, from.y)),
-      (pos2(right, from.y + ends_turn_vert_len), pos2(right, mid - middle_turn_vert_len)),
-      (pos2(right - middle_turn_radius, mid), pos2(left + middle_turn_radius, mid)),
-      (pos2(left, mid + middle_turn_vert_len), pos2(left, to.y - ends_turn_vert_len)),
-      (pos2(left + ends_turn_radius, to.y), to),
+      (from, pos2(from.x, bottom - ends_turn_radius)),
+      (pos2(from.x + ends_turn_horz_len, bottom), pos2(mid - middle_turn_horz_len, bottom)),
+      (pos2(mid, bottom - middle_turn_radius), pos2(mid, top + middle_turn_radius)),
+      (pos2(mid + middle_turn_horz_len, top), pos2(to.x - ends_turn_horz_len, top)),
+      (pos2(to.x, top + ends_turn_radius), to),
     ];
 
     let turn_centers = [
-      pos2(right - ends_turn_radius, from.y + ends_turn_vert_len),
-      pos2(right - middle_turn_radius, mid - middle_turn_vert_len),
-      pos2(left + middle_turn_radius, mid + middle_turn_vert_len),
-      pos2(left + ends_turn_radius, to.y - ends_turn_vert_len),
+      pos2(from.x + ends_turn_horz_len, bottom - ends_turn_radius),
+      pos2(mid - middle_turn_horz_len, bottom - middle_turn_radius),
+      pos2(mid + middle_turn_horz_len, top + middle_turn_radius),
+      pos2(to.x - ends_turn_horz_len, top + ends_turn_radius),
     ];
 
     let turn_radii = [ends_turn_radius, middle_turn_radius, middle_turn_radius, ends_turn_radius];
 
     AxisAlignedWire {
       aabb: Rect::from_min_max(
-        pos2(f32::min(left, from.x), f32::min(from.y, to.y)),
-        pos2(f32::max(right, to.x), f32::max(from.y, to.y)),
+        pos2(f32::min(from.x, to.x), f32::min(top, from.y)),
+        pos2(f32::max(from.x, to.x), f32::max(bottom, to.y)),
       ),
       turns: 4,
       segments,
