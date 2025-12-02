@@ -1611,24 +1611,23 @@ where
       ui.ctx().request_repaint();
     }
 
+    let has_body = viewer.has_body(&treeize.nodes.get(node.0).unwrap().value);
+
+    let payload_rect_y = if has_body {
+      node_rect.min.y
+        + node_state.header_height()
+        + header_frame.total_margin().bottom
+        + ui.spacing().item_spacing.y
+        - node_state.payload_offset(openness)
+    } else {
+      node_rect.min.y
+    };
     // Pins are placed under the header and must not go outside of the header frame.
-    let payload_rect = Rect::from_min_max(
-      pos2(
-        node_rect.min.x,
-        node_rect.min.y
-          + node_state.header_height()
-          + header_frame.total_margin().bottom
-          + ui.spacing().item_spacing.y
-          - node_state.payload_offset(openness),
-      ),
-      node_rect.max,
-    );
+    let payload_rect = Rect::from_min_max(pos2(node_rect.min.x, payload_rect_y), node_rect.max);
 
     let node_layout = viewer.node_layout(style.get_node_layout(), node, &inputs, &outputs, treeize);
 
     let payload_clip_rect = Rect::from_min_max(node_rect.min, pos2(node_rect.max.x, f32::INFINITY));
-
-    let has_body = viewer.has_body(&treeize.nodes.get(node.0).unwrap().value);
 
     let body_rect = if has_body {
       let body_rect = Rect::from_min_max(
@@ -1754,13 +1753,13 @@ where
       }
     }
 
-    node_state.set_size(vec2(
-      f32::max(header_size.x, body_rect.width()),
+    let node_size_y = if has_body {
+      header_size.y + header_frame.total_margin().bottom + body_rect.height()
+    } else {
       header_size.y
-        + header_frame.total_margin().bottom
-        + ui.spacing().item_spacing.y
-        + body_rect.height(),
-    ));
+    };
+
+    node_state.set_size(vec2(f32::max(header_size.x, body_rect.width()), node_size_y));
   });
 
   if !treeize.nodes.contains(node.0) {
