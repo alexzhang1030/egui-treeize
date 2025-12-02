@@ -881,7 +881,6 @@ where
   }
 
   let mut hovered_wire = None;
-  let mut hovered_wire_disconnect = false;
   let mut wire_shapes = Vec::new();
 
   // Draw and interact with wires
@@ -914,11 +913,6 @@ where
 
         if wire_hit {
           hovered_wire = Some(wire);
-
-          let wire_r = ui.interact(treeize_resp.rect, ui.make_persistent_id(wire), Sense::click());
-
-          //Remove hovered wire by second click
-          hovered_wire_disconnect |= wire_r.clicked_by(PointerButton::Secondary);
         }
       }
     }
@@ -943,13 +937,6 @@ where
       wire_threshold,
       pick_wire_style(from_r.wire_style, to_r.wire_style),
     );
-  }
-
-  // Remove hovered wire by second click
-  if hovered_wire_disconnect && let Some(wire) = hovered_wire {
-    let out_pin = OutPin::new(treeize, wire.out_pin);
-    let in_pin = InPin::new(treeize, wire.in_pin);
-    viewer.disconnect(&out_pin, &in_pin, treeize);
   }
 
   if let Some(select_rect) = rect_selection_ended {
