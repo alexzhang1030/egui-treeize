@@ -82,7 +82,7 @@ pub trait TreeizeViewer<T> {
 
   /// Returns elements layout for the node.
   ///
-  /// Node consists of 5 parts: header, body, footer, input pins and output pins.
+  /// Node consists of 4 parts: header, body, input pins and output pins.
   /// See [`NodeLayout`] for available placements.
   ///
   /// Returns `default` by default.
@@ -144,19 +144,6 @@ pub trait TreeizeViewer<T> {
   /// Renders the node's body.
   #[inline]
   fn show_body(&mut self, node: NodeId, ui: &mut Ui, treeize: &mut Treeize<T>) {
-    let _ = (node, ui, treeize);
-  }
-
-  /// Checks if node has something to show in footer - below pins and body.
-  #[inline]
-  fn has_footer(&mut self, node: &T) -> bool {
-    let _ = node;
-    false
-  }
-
-  /// Renders the node's footer.
-  #[inline]
-  fn show_footer(&mut self, node: NodeId, ui: &mut Ui, treeize: &mut Treeize<T>) {
     let _ = (node, ui, treeize);
   }
 

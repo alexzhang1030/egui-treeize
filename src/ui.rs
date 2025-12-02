@@ -38,13 +38,12 @@ pub use self::{
   wire::{WireLayer, WireStyle},
 };
 
-/// Controls how header, pins, body and footer are placed in the node.
+/// Controls how header, pins, body are placed in the node.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "egui-probe", derive(egui_probe::EguiProbe))]
 pub enum NodeLayoutKind {
   /// Input pins, body and output pins are placed horizontally.
-  /// With header on top and footer on bottom.
   ///
   /// +---------In----------+
   /// |       Header        |
@@ -52,9 +51,6 @@ pub enum NodeLayoutKind {
   /// |                     |
   /// |        Body         |
   /// |                     |
-  /// |                     |
-  /// +----+-----------+----+
-  /// |       Footer        |
   /// +--------Out----------+
   ///
   #[default]
@@ -227,7 +223,7 @@ pub struct TreeizeStyle {
 
   /// Whether nodes can be collapsed.
   /// If true, headers will have collapsing button.
-  /// When collapsed, node will not show its pins, body and footer.
+  /// When collapsed, node will not show its pins and body.
   #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none", default))]
   pub collapsible: Option<bool>,
 
@@ -1628,36 +1624,22 @@ where
       viewer.apply_node_style(ui.style_mut(), node, &inputs, &outputs, treeize);
     }
 
-    // Input pins' center side by X axis.
-    let input_x = match pin_placement {
+    // Input pins' center side by Y axis.
+    let input_y = match pin_placement {
       PinPlacement::Inside => {
-        pin_size.mul_add(0.5, node_frame_rect.left() + node_frame.inner_margin.leftf())
+        pin_size.mul_add(0.5, node_frame_rect.top() + node_frame.inner_margin.topf())
       }
-      PinPlacement::Edge => node_frame_rect.left(),
-      PinPlacement::Outside { margin } => pin_size.mul_add(-0.5, node_frame_rect.left() - margin),
+      PinPlacement::Edge => node_frame_rect.top(),
+      PinPlacement::Outside { margin } => pin_size.mul_add(-0.5, node_frame_rect.top() - margin),
     };
 
-    // Input pins' spacing required.
-    let input_spacing = match pin_placement {
-      PinPlacement::Inside => Some(pin_size),
-      PinPlacement::Edge => Some(pin_size.mul_add(0.5, -node_frame.inner_margin.leftf()).max(0.0)),
-      PinPlacement::Outside { .. } => None,
-    };
-
-    // Output pins' center side by X axis.
-    let output_x = match pin_placement {
+    // Output pins' center side by Y axis.
+    let output_y = match pin_placement {
       PinPlacement::Inside => {
-        pin_size.mul_add(-0.5, node_frame_rect.right() - node_frame.inner_margin.rightf())
+        pin_size.mul_add(-0.5, node_frame_rect.bottom() - node_frame.inner_margin.bottomf())
       }
-      PinPlacement::Edge => node_frame_rect.right(),
-      PinPlacement::Outside { margin } => pin_size.mul_add(0.5, node_frame_rect.right() + margin),
-    };
-
-    // Output pins' spacing required.
-    let output_spacing = match pin_placement {
-      PinPlacement::Inside => Some(pin_size),
-      PinPlacement::Edge => Some(pin_size.mul_add(0.5, -node_frame.inner_margin.rightf()).max(0.0)),
-      PinPlacement::Outside { .. } => None,
+      PinPlacement::Edge => node_frame_rect.bottom(),
+      PinPlacement::Outside { margin } => pin_size.mul_add(0.5, node_frame_rect.bottom() + margin),
     };
 
     // Input/output pin block
@@ -1683,144 +1665,23 @@ where
 
     let payload_clip_rect = Rect::from_min_max(node_rect.min, pos2(node_rect.max.x, f32::INFINITY));
 
-    let pins_rect = match node_layout.kind {
-      NodeLayoutKind::Compact => {
-        // Show input pins.
-        let r = draw_inputs(
-          treeize,
-          viewer,
-          node,
-          &inputs,
-          pin_size,
-          style,
-          ui,
-          payload_rect,
-          payload_clip_rect,
-          input_x,
-          node_rect.min.y,
-          node_rect.min.y + node_state.header_height(),
-          input_spacing,
-          treeize_state,
-          modifiers,
-          input_positions,
-          node_layout.input_heights(&node_state),
-        );
+    let has_body = viewer.has_body(&treeize.nodes.get(node.0).unwrap().value);
 
-        let new_input_heights = r.new_heights;
+    let body_rect = if has_body {
+      let body_rect = Rect::from_min_max(
+        pos2(node_rect.left(), payload_rect.top()),
+        pos2(node_rect.right(), payload_rect.bottom()),
+      );
+      let r = draw_body(treeize, viewer, node, ui, body_rect, payload_clip_rect, treeize_state);
 
-        drag_released |= r.drag_released;
-
-        if r.pin_hovered.is_some() {
-          pin_hovered = r.pin_hovered;
-        }
-
-        let inputs_rect = r.final_rect;
-        let inputs_size = inputs_rect.size();
-
-        if !treeize.nodes.contains(node.0) {
-          // If removed
-          return;
-        }
-
-        // Show output pins.
-
-        let r = draw_outputs(
-          treeize,
-          viewer,
-          node,
-          &outputs,
-          pin_size,
-          style,
-          ui,
-          payload_rect,
-          payload_clip_rect,
-          output_x,
-          node_rect.min.y,
-          node_rect.min.y + node_state.header_height(),
-          output_spacing,
-          treeize_state,
-          modifiers,
-          output_positions,
-          node_layout.output_heights(&node_state),
-        );
-
-        let new_output_heights = r.new_heights;
-
-        drag_released |= r.drag_released;
-
-        if r.pin_hovered.is_some() {
-          pin_hovered = r.pin_hovered;
-        }
-
-        let outputs_rect = r.final_rect;
-        let outputs_size = outputs_rect.size();
-
-        if !treeize.nodes.contains(node.0) {
-          // If removed
-          return;
-        }
-
-        node_state.set_input_heights(new_input_heights);
-        node_state.set_output_heights(new_output_heights);
-
-        new_pins_size = vec2(
-          inputs_size.x + outputs_size.x + ui.spacing().item_spacing.x,
-          f32::max(inputs_size.y, outputs_size.y),
-        );
-
-        let mut pins_rect = inputs_rect.union(outputs_rect);
-
-        // Show body if there's one.
-        if viewer.has_body(&treeize.nodes.get(node.0).unwrap().value) {
-          let body_rect = Rect::from_min_max(
-            pos2(inputs_rect.right() + ui.spacing().item_spacing.x, payload_rect.top()),
-            pos2(outputs_rect.left() - ui.spacing().item_spacing.x, payload_rect.bottom()),
-          );
-
-          let r = draw_body(treeize, viewer, node, ui, body_rect, payload_clip_rect, treeize_state);
-
-          new_pins_size.x += r.final_rect.width() + ui.spacing().item_spacing.x;
-          new_pins_size.y = f32::max(new_pins_size.y, r.final_rect.height());
-
-          pins_rect = pins_rect.union(body_rect);
-
-          if !treeize.nodes.contains(node.0) {
-            // If removed
-            return;
-          }
-        }
-
-        pins_rect
-      }
+      r.final_rect
+    } else {
+      Rect::ZERO
     };
 
-    if viewer.has_footer(&treeize.nodes[node.0].value) {
-      let footer_rect = Rect::from_min_max(
-        pos2(node_rect.left(), pins_rect.bottom() + ui.spacing().item_spacing.y),
-        pos2(node_rect.right(), node_rect.bottom()),
-      );
-
-      let mut footer_ui = ui.new_child(
-        UiBuilder::new()
-          .max_rect(footer_rect.round_ui())
-          .layout(Layout::left_to_right(Align::Min))
-          .id_salt("footer"),
-      );
-      footer_ui.shrink_clip_rect(payload_clip_rect);
-
-      viewer.show_footer(node, &mut footer_ui, treeize);
-
-      let final_rect = footer_ui.min_rect();
-      ui.expand_to_include_rect(final_rect.intersect(payload_clip_rect));
-      let footer_size = final_rect.size();
-
-      new_pins_size.x = f32::max(new_pins_size.x, footer_size.x);
-      new_pins_size.y += footer_size.y + ui.spacing().item_spacing.y;
-
-      if !treeize.nodes.contains(node.0) {
-        // If removed
-        return;
-      }
+    if !treeize.nodes.contains(node.0) {
+      // If removed
+      return;
     }
 
     // Render header frame.
@@ -1838,7 +1699,7 @@ where
 
     header_frame.show(header_ui, |ui: &mut Ui| {
       ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-        if style.get_collapsible() {
+        if style.get_collapsible() && has_body {
           let (_, r) = ui.allocate_exact_size(
             vec2(ui.spacing().icon_width, ui.spacing().icon_width),
             Sense::click(),
@@ -1851,9 +1712,14 @@ where
           }
         }
 
-        ui.allocate_exact_size(header_drag_space, Sense::hover());
-
-        viewer.show_header(node, ui, treeize);
+        if has_body {
+          ui.allocate_exact_size(header_drag_space, Sense::hover());
+          viewer.show_header(node, ui, treeize);
+        } else {
+          ui.allocate_exact_size(vec2(1.0, 0.0), Sense::hover());
+          viewer.show_header(node, ui, treeize);
+          ui.allocate_exact_size(vec2(1.0, 0.0), Sense::hover());
+        }
 
         header_rect = ui.min_rect();
       });
@@ -1866,6 +1732,11 @@ where
       ));
     });
 
+    if !treeize.nodes.contains(node.0) {
+      // If removed
+      return;
+    }
+
     ui.expand_to_include_rect(header_rect);
     let header_size = header_rect.size();
     node_state.set_header_height(header_size.y);
@@ -1875,7 +1746,7 @@ where
       header_size.y
         + header_frame.total_margin().bottom
         + ui.spacing().item_spacing.y
-        + new_pins_size.y,
+        + body_rect.height(),
     ));
   });
 
