@@ -112,10 +112,11 @@ pub trait TreeizeViewer<T> {
     ui.label(self.title(&treeize[node]));
   }
 
-  /// Returns number of input pins of the node.
-  ///
-  /// [`TreeizeViewer::show_input`] will be called for each input in range `0..inputs()`.
-  fn inputs(&mut self, node: &T) -> usize;
+  /// Returns true if node has an input pin.
+  fn has_input(&mut self, node: &T) -> bool;
+
+  /// Returns true if node has an output pin.
+  fn has_output(&mut self, node: &T) -> bool;
 
   /// Renders one specified node's input element and returns drawer for the corresponding pin.
   fn show_input(
@@ -124,11 +125,6 @@ pub trait TreeizeViewer<T> {
     ui: &mut Ui,
     treeize: &mut Treeize<T>,
   ) -> impl TreeizePin + 'static;
-
-  /// Returns number of output pins of the node.
-  ///
-  /// [`TreeizeViewer::show_output`] will be called for each output in range `0..outputs()`.
-  fn outputs(&mut self, node: &T) -> usize;
 
   /// Renders the node's output.
   fn show_output(

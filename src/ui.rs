@@ -1513,9 +1513,8 @@ where
 {
   let Node { pos, open, ref value } = treeize.nodes[node.0];
 
-  // Collect pins
-  let inputs_count = viewer.inputs(value);
-  let outputs_count = viewer.outputs(value);
+  let inputs_count = usize::from(viewer.has_input(value));
+  let outputs_count = usize::from(viewer.has_output(value));
 
   let inputs = (0..inputs_count)
     .map(|idx| InPin::new(treeize, InPinId { node, input: idx }))
