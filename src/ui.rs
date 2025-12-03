@@ -14,7 +14,11 @@ use egui::{
 };
 use egui_scale::EguiScale;
 
-use crate::{InPin, InPinId, Node, NodeId, OutPin, OutPinId, Treeize, ui::wire::WireId};
+use crate::{
+  InPin, InPinId, Node, NodeId, OutPin, OutPinId, Treeize,
+  layout::{LayoutConfig, layout_with_viewer},
+  ui::wire::WireId,
+};
 
 mod background_pattern;
 mod pin;
@@ -589,6 +593,14 @@ pub struct TreeizeWidget {
   max_size: Vec2,
 }
 
+/// Signal to layout the treeize.
+pub struct TreeizeLayoutSignal {
+  /// Signal to layout the treeize.
+  pub layout_signal: bool,
+  /// Configuration for the layout.
+  pub layout_config: LayoutConfig,
+}
+
 impl Default for TreeizeWidget {
   #[inline]
   fn default() -> Self {
@@ -671,7 +683,8 @@ impl TreeizeWidget {
     treeize: &mut Treeize<T>,
     viewer: &mut V,
     ui: &mut Ui,
-    center_signal: Option<&mut bool>,
+    center_signal: Option<bool>,
+    layout_signal: Option<&TreeizeLayoutSignal>,
   ) -> egui::Response
   where
     V: TreeizeViewer<T>,
@@ -687,6 +700,7 @@ impl TreeizeWidget {
       viewer,
       ui,
       center_signal,
+      layout_signal,
     )
   }
 }
@@ -701,7 +715,8 @@ fn show_treeize<T, V>(
   treeize: &mut Treeize<T>,
   viewer: &mut V,
   ui: &mut Ui,
-  center_signal: Option<&mut bool>,
+  center_signal: Option<bool>,
+  layout_signal: Option<&TreeizeLayoutSignal>,
 ) -> egui::Response
 where
   V: TreeizeViewer<T>,
@@ -981,7 +996,7 @@ where
 
   // Do centering unless no nodes are present.
   if let Some(center_signal) = center_signal
-    && *center_signal
+    && center_signal
     && nodes_bb.is_finite()
   {
     let nodes_bb = nodes_bb.expand(100.0);
@@ -1144,6 +1159,12 @@ where
   }
 
   treeize_state.store(treeize, ui.ctx());
+
+  if let Some(layout_signal) = layout_signal
+    && layout_signal.layout_signal
+  {
+    layout_with_viewer(treeize, viewer, layout_signal.layout_config, ui.ctx(), treeize_id);
+  }
 
   treeize_resp
 }
@@ -1488,7 +1509,7 @@ where
   let node_pos = pos.round_ui();
 
   // Generate persistent id for the node.
-  let node_id = treeize_id.with(("snarl-node", node));
+  let node_id = treeize_id.with(("treeize-node", node));
 
   let openness = ui.ctx().animate_bool(node_id, open);
 
@@ -1807,6 +1828,7 @@ impl<T> Treeize<T> {
       self,
       viewer,
       ui,
+      None,
       None,
     );
   }

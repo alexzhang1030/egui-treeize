@@ -52,6 +52,10 @@ impl NodeState {
     )
   }
 
+  pub fn pick_data(cx: &Context, id: Id) -> Option<NodeData> {
+    cx.data(|d| d.get_temp::<NodeData>(id))
+  }
+
   pub fn clear(self, cx: &Context) {
     cx.data_mut(|d| d.remove::<Self>(self.id));
   }
