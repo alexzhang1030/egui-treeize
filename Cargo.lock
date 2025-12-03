@@ -763,12 +763,9 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "egui",
- "egui-probe",
  "egui-treeize",
  "egui_extras",
- "serde",
  "serde_json",
- "syn",
  "wasm-bindgen-futures",
  "web-sys",
 ]
@@ -945,7 +942,6 @@ dependencies = [
  "serde_json",
  "slab",
  "smallvec",
- "syn",
  "wasm-bindgen-futures",
 ]
 
