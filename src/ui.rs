@@ -854,7 +854,6 @@ where
   let draw_order = treeize_state.update_draw_order(treeize);
   let mut drag_released = false;
 
-  let mut nodes_bb = Rect::NOTHING;
   let mut node_rects = Vec::new();
 
   for node_idx in draw_order {
@@ -888,7 +887,6 @@ where
       }
       drag_released |= response.drag_released;
 
-      nodes_bb = nodes_bb.union(response.final_rect);
       if rect_selection_ended.is_some() {
         node_rects.push((node_idx, response.final_rect));
       }
@@ -992,19 +990,6 @@ where
   {
     let _ = treeize_state.take_new_wires();
     treeize_resp.flags.remove(Flags::CLICKED);
-  }
-
-  // Do centering unless no nodes are present.
-  if let Some(center_signal) = center_signal
-    && center_signal
-    && nodes_bb.is_finite()
-  {
-    let nodes_bb = nodes_bb.expand(100.0);
-    treeize_state.look_at(nodes_bb, ui_rect, min_scale, max_scale);
-  }
-
-  if modifiers.command && treeize_resp.clicked_by(PointerButton::Primary) {
-    treeize_state.deselect_all_nodes();
   }
 
   // Wire end position will be overridden when link graph menu is opened.
@@ -1158,13 +1143,37 @@ where
     }
   }
 
-  treeize_state.store(treeize, ui.ctx());
-
   if let Some(layout_signal) = layout_signal
     && layout_signal.layout_signal
   {
     layout_with_viewer(treeize, viewer, layout_signal.layout_config, ui.ctx(), treeize_id);
   }
+
+  // Do centering unless no nodes are present.
+  if let Some(center_signal) = center_signal
+    && center_signal
+  {
+    let mut nodes_bb = Rect::NOTHING;
+
+    for (node_id, _) in treeize.node_ids() {
+      let node_state_id = treeize_id.with(("treeize-node", node_id));
+      if let Some(node_data) = NodeState::pick_data(ui.ctx(), node_state_id) {
+        nodes_bb =
+          nodes_bb.union(Rect::from_min_size(treeize.nodes[node_id.0].pos, node_data.size));
+      }
+    }
+
+    if nodes_bb.is_finite() {
+      let nodes_bb = nodes_bb.expand(100.0);
+      treeize_state.look_at(nodes_bb, ui_rect, min_scale, max_scale);
+    }
+  }
+
+  if modifiers.command && treeize_resp.clicked_by(PointerButton::Primary) {
+    treeize_state.deselect_all_nodes();
+  }
+
+  treeize_state.store(treeize, ui.ctx());
 
   treeize_resp
 }
