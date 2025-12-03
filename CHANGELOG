@@ -14,3 +14,8 @@ This project is based on [egui-snarl](https://github.com/zakarumych/egui-snarl) 
 - Initial release of `egui-treeize` with basic tree-like graph visualization.
 - Supports `readonly` and `editable` modes. Defaults is `readonly`.
 - No draggable nodes for readonly mode, no deletable wires for dual modes.
+- `Treeize` only supports Top-To-Bottom layout, so the wires and links are only allowed to go from top to bottom.
+- Supports `readonly` and `editable` modes. Defaults is `readonly`.
+- No draggable nodes for readonly mode, no deletable wires for dual modes.
+- No multiple input/output pins for a node. We connect all wires to the same input/output pin.
+- No footer.
