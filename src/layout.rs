@@ -459,7 +459,6 @@ pub fn layout_with_viewer<T, V>(
   for (node_id, _) in treeize.node_ids() {
     let node_state_id = treeize_id.with(("treeize-node", node_id));
     if let Some(node_data) = NodeState::pick_data(ctx, node_state_id) {
-      println!("node_data: {:?}", node_data.size);
       node_sizes_map.insert(node_id, node_data.size);
     }
   }
