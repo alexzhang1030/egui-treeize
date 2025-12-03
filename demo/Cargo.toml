@@ -12,7 +12,6 @@ path = "../examples/demo.rs"
 eframe               = { workspace = true, features = ["serde", "persistence"] }
 egui.workspace       = true
 egui_extras          = { workspace = true, features = ["all_loaders"] }
-serde_json.workspace = true
 
 egui-treeize = { path = "..", features = ["egui-probe", "serde"] }
 

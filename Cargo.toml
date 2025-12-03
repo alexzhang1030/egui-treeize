@@ -14,7 +14,6 @@ eframe      = { version = "0.33" }
 egui        = { version = "0.33" }
 egui_extras = { version = "0.33" }
 serde       = { version = "1" }
-serde_json  = { version = "1" }
 
 egui-probe           = { version = "0.10.0" }
 egui-scale           = { version = "0.3.0" }
@@ -47,10 +46,9 @@ egui-probe           = { workspace = true, features = ["derive"], optional = tru
 egui-scale.workspace = true
 
 [dev-dependencies]
-eframe               = { workspace = true, features = ["serde", "persistence"] }
-egui_extras          = { workspace = true, features = ["all_loaders"] }
-rusty-hook           = "^0.11.2"
-serde_json.workspace = true
+eframe      = { workspace = true, features = ["serde", "persistence"] }
+egui_extras = { workspace = true, features = ["all_loaders"] }
+rusty-hook  = "^0.11.2"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-futures.workspace = true
