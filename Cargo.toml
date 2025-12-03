@@ -33,7 +33,7 @@ name                    = "egui-treeize"
 readme                  = "README.md"
 repository.workspace    = true
 rust-version.workspace  = true
-version                 = "0.0.1"
+version                 = "0.1.0"
 
 [features]
 serde = ["dep:serde", "egui/serde", "slab/serde"]
