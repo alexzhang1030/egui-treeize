@@ -367,9 +367,11 @@ where
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```rs
 /// use egui_treeize::{Treeize, layout::{LayoutConfig, layout_and_apply}};
 /// use std::collections::HashMap;
+///
+/// struct MyNode;
 ///
 /// let mut treeize = Treeize::<MyNode>::new();
 /// let config = LayoutConfig {
@@ -427,11 +429,13 @@ pub fn layout_and_apply<T>(
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```rs
 /// use egui_treeize::{Treeize, layout::{LayoutConfig, layout_with_viewer}};
 /// use egui_treeize::ui::TreeizeViewer;
 ///
 /// struct MyViewer;
+/// struct MyNode;
+///
 /// impl TreeizeViewer<MyNode> for MyViewer {
 ///     // ... implement required methods
 /// }
