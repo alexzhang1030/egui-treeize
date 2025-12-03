@@ -1,10 +1,10 @@
 #![allow(clippy::use_self)]
 
 use eframe::{App, CreationContext};
-use egui::{Id, Ui};
+use egui::Id;
 use egui_treeize::{
-  InPin, OutPin, Treeize,
-  ui::{NodeLayout, PinPlacement, TreeizePin, TreeizeStyle, TreeizeViewer, TreeizeWidget},
+  Treeize,
+  ui::{PinInfo, TreeizeStyle, TreeizeViewer, TreeizeWidget},
 };
 
 pub struct DemoNode;
@@ -14,52 +14,15 @@ pub struct DemoApp {
   style: TreeizeStyle,
 }
 
-const fn default_style() -> TreeizeStyle {
-  TreeizeStyle {
-    node_layout: Some(NodeLayout::compact()),
-    pin_placement: Some(PinPlacement::Edge),
-    pin_size: Some(7.0),
-    node_frame: Some(egui::Frame {
-      inner_margin: egui::Margin::same(8),
-      outer_margin: egui::Margin { left: 0, right: 0, top: 0, bottom: 4 },
-      corner_radius: egui::CornerRadius::same(8),
-      fill: egui::Color32::from_gray(30),
-      stroke: egui::Stroke::NONE,
-      shadow: egui::Shadow::NONE,
-    }),
-    bg_frame: Some(egui::Frame {
-      inner_margin: egui::Margin::ZERO,
-      outer_margin: egui::Margin::same(2),
-      corner_radius: egui::CornerRadius::ZERO,
-      fill: egui::Color32::from_gray(40),
-      stroke: egui::Stroke::NONE,
-      shadow: egui::Shadow::NONE,
-    }),
-    ..TreeizeStyle::new()
-  }
-}
-
 impl DemoApp {
   pub fn new(cx: &CreationContext) -> Self {
     egui_extras::install_image_loaders(&cx.egui_ctx);
 
     cx.egui_ctx.style_mut(|style| style.animation_time *= 10.0);
 
-    let treeize = cx.storage.map_or_else(Treeize::new, |storage| {
-      storage
-        .get_string("treeize")
-        .and_then(|treeize| serde_json::from_str(&treeize).ok())
-        .unwrap_or_default()
-    });
-    // let treeize = Treeize::new();
+    let treeize = Treeize::new();
 
-    let style = cx.storage.map_or_else(default_style, |storage| {
-      storage
-        .get_string("style")
-        .and_then(|style| serde_json::from_str(&style).ok())
-        .unwrap_or_else(default_style)
-    });
-    // let style = TreeizeStyle::new();
+    let style = TreeizeStyle::new();
 
     DemoApp { treeize, style }
   }
@@ -68,30 +31,32 @@ impl DemoApp {
 struct DemoViewer;
 
 impl TreeizeViewer<DemoNode> for DemoViewer {
-  fn title(&mut self, node: &DemoNode) -> String {
+  fn title(&mut self, _node: &DemoNode) -> String {
     "DemoNode".to_string()
   }
-  fn has_input(&mut self, node: &DemoNode) -> bool {
+  fn has_input(&mut self, _node: &DemoNode) -> bool {
     false
   }
-  fn has_output(&mut self, node: &DemoNode) -> bool {
+  fn has_output(&mut self, _node: &DemoNode) -> bool {
     false
   }
+  #[allow(refining_impl_trait)]
   fn show_input(
     &mut self,
-    pin: &InPin,
-    ui: &mut Ui,
-    treeize: &mut Treeize<DemoNode>,
-  ) -> impl TreeizePin + 'static {
-    todo!()
+    _pin: &egui_treeize::InPin,
+    _ui: &mut egui::Ui,
+    _treeize: &mut Treeize<DemoNode>,
+  ) -> PinInfo {
+    PinInfo::circle()
   }
+  #[allow(refining_impl_trait)]
   fn show_output(
     &mut self,
-    pin: &OutPin,
-    ui: &mut Ui,
-    treeize: &mut Treeize<DemoNode>,
-  ) -> impl TreeizePin + 'static {
-    todo!()
+    _pin: &egui_treeize::OutPin,
+    _ui: &mut egui::Ui,
+    _treeize: &mut Treeize<DemoNode>,
+  ) -> PinInfo {
+    PinInfo::circle()
   }
 }
 
@@ -106,14 +71,6 @@ impl App for DemoApp {
         None,
       );
     });
-  }
-
-  fn save(&mut self, storage: &mut dyn eframe::Storage) {
-    let treeize = serde_json::to_string(&self.treeize).unwrap();
-    storage.set_string("treeize", treeize);
-
-    let style = serde_json::to_string(&self.style).unwrap();
-    storage.set_string("style", style);
   }
 }
 
@@ -156,9 +113,4 @@ fn main() {
       .await
       .expect("failed to start eframe");
   });
-}
-
-fn format_float(v: f64) -> String {
-  let v = (v * 1000.0).round() / 1000.0;
-  format!("{v}")
 }
